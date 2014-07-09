@@ -11,7 +11,6 @@ func panicOnError(err error) {
 	if err != nil {
 		//dump("Error occoured:%s", err.Error())
 		//os.Exit(1)
-
 		panic(err)
 	}
 }

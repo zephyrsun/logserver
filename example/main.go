@@ -6,5 +6,5 @@ import (
 
 
 func main() {
-	logserver.Run()
+	logserver.Listen()
 }

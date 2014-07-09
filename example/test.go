@@ -3,15 +3,32 @@ package main
 import (
 	"fmt"
 	"time"
+	"path/filepath"
 )
+
+func fibonacci(c, quit chan int) {
+	x, y := 1, 1
+	for {
+		select {
+		case c <- x:
+			x, y = y, x+y
+		case <-quit:
+			fmt.Println("quit")
+			return
+		}
+	}
+}
 
 func main() {
 
-	//v, _ := os.OpenFile("config.json", os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.FileMode(0666))
+	//err:= os.Mkdir("./log/a.log", os.FileMode(0666))
+	//exec.LookPath("")
 
-	//go ticker()
+	e := filepath.Dir("./log/a.log")
 
-	//time.Sleep(10 * time.Second)
+	fmt.Printf("%v,%v", e)
+
+
 }
 
 func ticker() {

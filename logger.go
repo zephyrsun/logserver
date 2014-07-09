@@ -2,6 +2,7 @@ package logserver
 
 import (
 	"os"
+	"path/filepath"
 	"fmt"
 	"time"
 )
@@ -16,11 +17,11 @@ func (this *Logger) Write(b []byte) error {
 
 	b = append(b, EOL...)
 
-	dump("%s", b)
+	//dump("%s", b)
 
 	_, err := this.out.Write(b)
 
-	panicOnError(err)
+	this.Error(err)//panicOnError(err)
 
 	return err
 }
@@ -42,11 +43,13 @@ func (this *Logger) Close() {
 }
 
 func NewLogger(f string) (*Logger) {
+	//dump("dir:%s", f)
 
-	var mode os.FileMode = 0666
+	//create dir first
+	os.Mkdir(filepath.Dir(f), os.ModePerm)
+	//panicOnError(err)
 
-	out, err := os.OpenFile(f, os.O_WRONLY|os.O_APPEND|os.O_CREATE, mode)
-
+	out, err := os.OpenFile(f, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModePerm)
 	panicOnError(err)
 
 	return &Logger{out}
