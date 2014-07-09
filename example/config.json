@@ -1,5 +1,5 @@
 {
-    "address": "127.0.0.1:8282",
+    "address": ":8282",
     "sys_log": "syslog/logserver.log",
     "save_dir": "data/"
 }

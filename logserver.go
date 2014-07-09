@@ -92,7 +92,7 @@ func (this *LogServer) listen(addr string) {
 	panicOnError(err)
 
 	defer conn.Close()
-	dump("Listening - %s", addr)
+	dump("Listening - %s", conn.LocalAddr())
 
 	c := make(chan []byte)
 
