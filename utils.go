@@ -28,14 +28,15 @@ func ticker(sec time.Duration, callback func(time.Time) bool) {
 	}
 }
 
-func loadConfig(file string) (config jsonConfigType) {
+func loadConfig(file string, config jsonConfigType) {
 
 	b, err := ioutil.ReadFile(file)
-	panicOnError(err)
+	//panicOnError(err)
+	if err != nil {
+		return
+	}
 
 	err = json.Unmarshal(b, &config)
 	panicOnError(err)
-
-	return
 }
 
