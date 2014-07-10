@@ -9,14 +9,14 @@ import (
 
 func main() {
 
-	poolNum := 8
-
-	var pool [8]net.Conn
-
-
 	addr := flag.String("addr", ":8282", "Server address")
+	c := flag.Int("c", 2, "Number of server connection to make")
 	n := flag.Int("n", 100000, "Number of requests to perform")
 	d := flag.String("d", "1=2014-07-10 13:57:40|200|1|2|3|4|5|6|||||||||1111111111|2222222222|3333333333|from|tttttttt||||||||||||||||&2=2014-07-10 14:14:58|2014-07-10 13:57:40|200|1|2|3|4|5|6|||||||||1111111111|2222222222|3333333333|from|tttttttt||||||||||||||||", "Data to be sent")
+
+	num := *c
+
+	pool := make(map[int]net.Conn)
 
 	flag.Parse()
 
@@ -24,7 +24,7 @@ func main() {
 	b := []byte(*d)
 
 	// init connection pool
-	for i := 0; i < poolNum; i++ {
+	for i := 0; i < num; i++ {
 		conn, err := net.Dial("udp", *addr)
 		logserver.PanicOnError(err)
 
@@ -38,9 +38,10 @@ func main() {
 
 	go func() {
 
-		for{
-			i:=<-ci % poolNum
-			pool[i].Write(b)
+		for {
+			i := <-ci % num
+			_, err := pool[i].Write(b)
+			logserver.PanicOnError(err)
 		}
 	}()
 
