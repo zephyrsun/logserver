@@ -17,11 +17,11 @@ func (this *Logger) Write(b []byte) error {
 
 	b = append(b, EOL...)
 
-	//dump("%s", b)
+	//Dump("%s", b)
 
 	_, err := this.out.Write(b)
 
-	this.Error(err)//panicOnError(err)
+	this.Error(err)//PanicOnError(err)
 
 	return err
 }
@@ -43,14 +43,14 @@ func (this *Logger) Close() {
 }
 
 func NewLogger(f string) (*Logger) {
-	//dump("dir:%s", f)
+	//Dump("dir:%s", f)
 
 	//create dir first
 	os.Mkdir(filepath.Dir(f), os.ModePerm)
-	//panicOnError(err)
+	//PanicOnError(err)
 
 	out, err := os.OpenFile(f, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModePerm)
-	panicOnError(err)
+	PanicOnError(err)
 
 	return &Logger{out}
 }

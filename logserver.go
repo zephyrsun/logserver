@@ -9,8 +9,6 @@ import (
 	"bytes"
 )
 
-type jsonConfigType map[string]string
-
 var logType = map[string]string {
 	"1":"login",
 	"2":"act",
@@ -21,26 +19,25 @@ var logType = map[string]string {
 	"7":"att",
 }
 
-var config = jsonConfigType{
-	"address": ":8282",
-	"sys_log": "syslog/logserver.log",
-	"save_dir": "data/",
-}
-
 var (
 	sysLog *Logger
 )
 
+type LogServer struct{
+	timeNow time.Time
+	logger map[string]*Logger
+}
+
 func Listen() {
-	cfgFile := flag.String("c", "config.json", "set configuration file")
-	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
-	memprofile := flag.String("memprofile", "", "write memory profile to this file")
+	cfgFile := flag.String("c", "config.json", "Set configuration file")
+	cpuprofile := flag.String("cpuprofile", "", "Write cpu profile to file")
+	memprofile := flag.String("memprofile", "", "Write memory profile to file")
 
 	flag.Parse()
 
 	prof(*cpuprofile, *memprofile)
 
-	loadConfig(*cfgFile, config)
+	loadConfig(*cfgFile)
 
 	New().listen(config["address"])
 }
@@ -58,17 +55,12 @@ func New() (server *LogServer) {
 	return
 }
 
-type LogServer struct{
-	timeNow time.Time
-	logger map[string]*Logger
-}
-
 func (this *LogServer) listen(addr string) {
 	conn, err := net.ListenPacket("udp", addr)
-	panicOnError(err)
+	PanicOnError(err)
 
 	defer conn.Close()
-	dump("Listening - %s", conn.LocalAddr())
+	Dump("Listening - %s", conn.LocalAddr())
 
 	c := make(chan []byte)
 
@@ -90,14 +82,14 @@ func (this *LogServer) initLogger() {
 			for k, v := range logType {
 				file := config["save_dir"] + v + "_" + this.timeNow.Format("2006-01-02-15") + ".log"
 
-				if this.logger[k] != nil {
-					this.logger[k].Close()
+				l, ok := this.logger[k]
+				if ok {
+					l.Close()
 				}
+				//Dump("Open file:%s", file)
 
 				this.logger[k] = NewLogger(file)
 			}
-
-			//sysLog.Log("Open file:%s", file)
 		}
 
 		return true
@@ -109,9 +101,9 @@ func (this *LogServer) initLogger() {
 }
 
 func (this *LogServer) Read(c chan []byte, conn net.PacketConn) {
-	buf := make([]byte, 2048) //var buf [2048]byte
 
 	go func() {
+		buf := make([]byte, 2048) //var buf [2048]byte
 		for {
 			n , _, err := conn.ReadFrom(buf)
 			if err == nil {
@@ -145,6 +137,8 @@ func (this *LogServer) Split(b []byte) {
 	this.Write(b[start:])
 }
 
+// e.g.
+// 1=2014-07-10 13:23:46|200|1|2|3|4|5|6|||||||||1111111111|2222222222|3333333333|from|tttttttt||||||||||||||||
 func (this *LogServer) Write(b []byte) {
 
 	s := bytes.SplitN(b, []byte("="), 2)
@@ -153,7 +147,7 @@ func (this *LogServer) Write(b []byte) {
 
 	buf = append(buf, s[1]...)
 
-	//dump("writing: %s", buf)
+	//Dump("writing: %s", buf)
 
 	this.logger[string(s[0])].Write(buf)
 }
@@ -161,7 +155,7 @@ func (this *LogServer) Write(b []byte) {
 func prof(cpuprofile string, memprofile string) {
 	if cpuprofile != "" {
 		f, err := os.Create(cpuprofile)
-		panicOnError(err)
+		PanicOnError(err)
 
 		pprof.StartCPUProfile(f)
 		defer pprof.StopCPUProfile()
@@ -169,7 +163,7 @@ func prof(cpuprofile string, memprofile string) {
 
 	if memprofile != "" {
 		f, err := os.Create(memprofile)
-		panicOnError(err)
+		PanicOnError(err)
 
 		defer pprof.WriteHeapProfile(f)
 	}
