@@ -16,7 +16,7 @@ func main() {
 	conn, err := net.Dial("udp", ":8282")
 	logserver.PanicOnError(err)
 
-	b := []byte(d)
+	b := []byte(*d)
 
 	for i := 0; i < *n; i++ {
 
