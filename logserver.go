@@ -34,8 +34,8 @@ func Listen() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	cfgFile := flag.String("c", "config.json", "Set configuration file")
-	cpuprofile := flag.String("cpuprofile", "", "Write cpu profile to file")
-	memprofile := flag.String("memprofile", "", "Write memory profile to file")
+	cpuprofile := flag.String("cpuprofile", "cpu.prof", "Write cpu profile to file")
+	memprofile := flag.String("memprofile", "mem.prof", "Write memory profile to file")
 
 	flag.Parse()
 
@@ -66,9 +66,7 @@ func (this *LogServer) listen(addr string) {
 	defer conn.Close()
 	Dump("Listening - %s", conn.LocalAddr())
 
-	c := make(chan []byte)
-
-	this.Read(c, conn)
+	this.Read(conn)
 }
 
 func (this *LogServer) initLogger() {
@@ -104,7 +102,9 @@ func (this *LogServer) initLogger() {
 	go ticker(1, f)
 }
 
-func (this *LogServer) Read(c chan []byte, conn net.PacketConn) {
+func (this *LogServer) Read(conn net.PacketConn) {
+
+	c := make(chan []byte)
 
 	go func() {
 		buf := make([]byte, 2048) //var buf [2048]byte
