@@ -4,6 +4,7 @@ import (
 	"net"
 	"github.com/zephyrsun/logserver"
 	"flag"
+	"time"
 )
 
 func main() {
@@ -19,13 +20,14 @@ func main() {
 
 	b := []byte(*d)
 
+	t := time.Now()
 	for i := 0; i < *n; i++ {
 
-		d, _ := conn.Write(b)
+		conn.Write(b)
 
 		//logserver.PanicOnError(err)
-		logserver.Dump("Bytes was sent:%d", d)
+		//logserver.Dump("Bytes was sent:%d", d)
 	}
 
-	logserver.Dump("Done!")
+	logserver.Dump("Done! time:%s", time.Now().Sub(t))
 }

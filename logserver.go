@@ -7,6 +7,7 @@ import (
 	"os"
 	"runtime/pprof"
 	"bytes"
+	"runtime"
 )
 
 var logType = map[string]string {
@@ -29,6 +30,9 @@ type LogServer struct{
 }
 
 func Listen() {
+
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
 	cfgFile := flag.String("c", "config.json", "Set configuration file")
 	cpuprofile := flag.String("cpuprofile", "", "Write cpu profile to file")
 	memprofile := flag.String("memprofile", "", "Write memory profile to file")
