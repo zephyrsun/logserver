@@ -116,7 +116,9 @@ func (this *LogServer) Read(conn net.PacketConn) {
 		a[i] = make(chan []byte)
 
 		go func() {
-			this.Parse(<-a[i], this.Write)
+			for {
+				this.Parse(<-a[i], this.Write)
+			}
 		}()
 	}
 
