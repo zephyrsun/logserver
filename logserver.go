@@ -31,8 +31,6 @@ type LogServer struct{
 
 func Listen() {
 
-	runtime.GOMAXPROCS(runtime.NumCPU())
-
 	cfgFile := flag.String("c", "config.json", "Set configuration file")
 	cpuprofile := flag.String("cpuprofile", "", "Write cpu profile to file")
 	memprofile := flag.String("memprofile", "", "Write memory profile to file")
@@ -47,6 +45,7 @@ func Listen() {
 }
 
 func New() (server *LogServer) {
+
 	sysLog = NewLogger(config["sys_log"])
 	defer sysLog.Close()
 
@@ -107,20 +106,32 @@ func (this *LogServer) initLogger() {
 
 func (this *LogServer) Read(conn net.PacketConn) {
 
-	c := make(chan []byte)
+	max := runtime.NumCPU()
+	i := 0
 
-	go func() {
-		buf := make([]byte, 2048) //var buf [2048]byte
-		for {
-			n , _, err := conn.ReadFrom(buf)
-			if err == nil {
-				c <- buf[:n]
+	var a [64]chan []byte
+
+	// maximum i is len(a)-1
+	for ; i < max; i++ {
+		a[i] = make(chan []byte)
+
+		go func() {
+			this.Parse(<-a[i], this.Write)
+		}()
+	}
+
+	i = 0
+	buf := make([]byte, 2048) //var buf [2048]byte
+	for {
+		n , _, err := conn.ReadFrom(buf)
+		if err == nil {
+			a[i] <-buf[:n]
+
+			i++
+			if i == max {
+				i = 0
 			}
 		}
-	}()
-
-	for {
-		this.Parse(<-c, this.Write)
 	}
 }
 
@@ -178,4 +189,8 @@ func prof(cpuprofile string, memprofile string) {
 
 		defer pprof.WriteHeapProfile(f)
 	}
+}
+
+func init() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
 }
