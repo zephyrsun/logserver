@@ -105,40 +105,27 @@ func (this *LogServer) initLogger() {
 }
 
 func (this *LogServer) Read(conn net.PacketConn) {
+	c := make(chan []byte, runtime.NumCPU())
 
-	max := runtime.NumCPU()
-	i := 0
-
-	var a [64]chan []byte
-
-	// maximum i is len(a)-1
-	for ; i < max; i++ {
-		a[i] = make(chan []byte)
-
-		go func() {
-			for {
-				this.Parse(<-a[i], this.Write)
-			}
-		}()
-	}
-
-	i = 0
 	buf := make([]byte, 2048) //var buf [2048]byte
-	for {
-		n , _, err := conn.ReadFrom(buf)
-		if err == nil {
-			a[i] <-buf[:n]
 
-			i++
-			if i == max {
-				i = 0
+	go func() {
+		for {
+			n , _, err := conn.ReadFrom(buf)
+			if err == nil {
+				c <-buf[:n]
 			}
 		}
+	}()
+
+	for b := range c {
+		go this.Parse(b)
 	}
+
 }
 
 // &分隔
-func (this *LogServer) Parse(b []byte, callback func(string, []byte)) {
+func (this *LogServer) Parse(b []byte) {
 
 	//arr := strings.Split(log, "&")
 
@@ -147,14 +134,14 @@ func (this *LogServer) Parse(b []byte, callback func(string, []byte)) {
 	start := 0
 	for i := 0; i < len(b); i++ {
 		if b[i] == sep {
-			callback(this.Format(b[start:i]))
+			this.Write(this.Format(b[start:i]))
 
 			start = i+1
 		}
 	}
 
 	//last one
-	callback(this.Format(b[start:]))
+	this.Write(this.Format(b[start:]))
 }
 
 func (this *LogServer) Format(b []byte) (k string, buf []byte) {
@@ -172,7 +159,7 @@ func (this *LogServer) Format(b []byte) (k string, buf []byte) {
 // e.g.
 // 1=2014-07-10 13:23:46|200|1|2|3|4|5|6|||||||||1111111111|2222222222|3333333333|from|tttttttt||||||||||||||||
 func (this *LogServer) Write(k string, b []byte) {
-	//Dump("writing: %s", buf)
+	//Dump("writing: %s", b)
 	this.logger[k].Write(b)
 }
 

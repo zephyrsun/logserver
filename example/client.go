@@ -10,44 +10,32 @@ import (
 func main() {
 
 	addr := flag.String("addr", ":8282", "Server address")
-	c := flag.Int("c", 2, "Number of server connection to make")
+	r := flag.Int("t", 2, "Number of routing")
 	n := flag.Int("n", 100000, "Number of requests to perform")
 	d := flag.String("d", "1=2014-07-10 13:57:40|200|1|2|3|4|5|6|||||||||1111111111|2222222222|3333333333|from|tttttttt||||||||||||||||&2=2014-07-10 14:14:58|2014-07-10 13:57:40|200|1|2|3|4|5|6|||||||||1111111111|2222222222|3333333333|from|tttttttt||||||||||||||||", "Data to be sent")
 
-	max := *c
-
-	pool := make(map[int]net.Conn)
-
 	flag.Parse()
 
-	// send data
 	b := []byte(*d)
 
-	// init connection pool
-	for i := 0; i < max; i++ {
-		conn, err := net.Dial("udp", *addr)
-		logserver.PanicOnError(err)
-
-		pool[i] = conn
-	}
-
-	// seed
-	//rand.Seed(time.Now().UnixNano())
-
-	ci := make(chan int)
-
-	go func() {
-
-		for {
-			i := <-ci % max
-			_, err := pool[i].Write(b)
-			logserver.PanicOnError(err)
-		}
-	}()
-
 	t := time.Now()
-	for i := 0; i < *n; i++ {
-		ci<-i
+
+	c := make(chan int, *r)
+
+	for i := 0; i < *r; i++ {
+		go func() {
+			conn, err := net.Dial("udp", *addr)
+			logserver.PanicOnError(err)
+
+			i := 0
+			for ; i < *n/(*r); i++ {
+				_, err := conn.Write(b)
+				logserver.PanicOnError(err)
+			}
+
+			c<-i
+		}()
+		logserver.Dump("written: %d", <-c)
 	}
 
 	logserver.Dump("Done! time:%s", time.Now().Sub(t))
