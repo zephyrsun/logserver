@@ -34,8 +34,8 @@ func Listen() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	cfgFile := flag.String("c", "config.json", "Set configuration file")
-	cpuprofile := flag.String("cpuprofile", "cpu.prof", "Write cpu profile to file")
-	memprofile := flag.String("memprofile", "mem.prof", "Write memory profile to file")
+	cpuprofile := flag.String("cpuprofile", "", "Write cpu profile to file")
+	memprofile := flag.String("memprofile", "", "Write memory profile to file")
 
 	flag.Parse()
 
@@ -84,13 +84,16 @@ func (this *LogServer) initLogger() {
 			for k, v := range logType {
 				file := config["save_dir"] + v + "_" + this.timeNow.Format("2006-01-02-15") + ".log"
 
-				l, ok := this.logger[k]
+				//new first, copy after
+				nf := NewLogger(file)
+
+				of, ok := this.logger[k]
 				if ok {
-					l.Close()
+					of.Close()
 				}
 				//Dump("Open file:%s", file)
 
-				this.logger[k] = NewLogger(file)
+				this.logger[k] = nf
 			}
 		}
 
@@ -117,12 +120,12 @@ func (this *LogServer) Read(conn net.PacketConn) {
 	}()
 
 	for {
-		this.Split(<-c)
+		this.Parse(<-c, this.Write)
 	}
 }
 
 // &分隔
-func (this *LogServer) Split(b []byte) {
+func (this *LogServer) Parse(b []byte, callback func(string, []byte)) {
 
 	//arr := strings.Split(log, "&")
 
@@ -131,29 +134,33 @@ func (this *LogServer) Split(b []byte) {
 	start := 0
 	for i := 0; i < len(b); i++ {
 		if b[i] == sep {
-			this.Write(b[start:i])
+			callback(this.Format(b[start:i]))
 
 			start = i+1
 		}
 	}
 
 	//last one
-	this.Write(b[start:])
+	callback(this.Format(b[start:]))
+}
+
+func (this *LogServer) Format(b []byte) (k string, buf []byte) {
+	s := bytes.SplitN(b, []byte("="), 2)
+
+	buf = append([]byte(this.timeNow.Format("2006-01-02 15:04:05")), "|"...)
+
+	buf = append(buf, s[1]...)
+
+	k = string(s[0])
+
+	return
 }
 
 // e.g.
 // 1=2014-07-10 13:23:46|200|1|2|3|4|5|6|||||||||1111111111|2222222222|3333333333|from|tttttttt||||||||||||||||
-func (this *LogServer) Write(b []byte) {
-
-	s := bytes.SplitN(b, []byte("="), 2)
-
-	buf := append([]byte(this.timeNow.Format("2006-01-02 15:04:05")), "|"...)
-
-	buf = append(buf, s[1]...)
-
+func (this *LogServer) Write(k string, b []byte) {
 	//Dump("writing: %s", buf)
-
-	this.logger[string(s[0])].Write(buf)
+	this.logger[k].Write(b)
 }
 
 func prof(cpuprofile string, memprofile string) {
