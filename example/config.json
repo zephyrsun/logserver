@@ -1,5 +1,4 @@
 {
     "address": ":8282",
-    "sys_log": "syslog/logserver.log",
     "save_dir": "data/"
 }

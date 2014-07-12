@@ -3,32 +3,39 @@ package logserver
 import (
 	"fmt"
 	"time"
+	"log"
 	"io/ioutil"
 	"encoding/json"
 )
 
+var logType = map[string]string {
+	"1":"login",
+	"2":"act",
+	"3":"pay",
+	"4":"item",
+	"5":"error",
+	"6":"funel",
+	"7":"att",
+}
+
 type configType map[string]string
 
-var config = configType{
+var Config = configType{
 	"address": ":8282",
-	"sys_log": "syslog/logserver.log",
 	"save_dir": "data/",
 }
 
 func loadConfig(file string) {
 	b, err := ioutil.ReadFile(file)
-	//PanicOnError(err)
 	if err == nil {
-		err = json.Unmarshal(b, &config)
-		PanicOnError(err)
+		err = json.Unmarshal(b, &Config)
+		ErrorHandler(err)
 	}
 }
 
-func PanicOnError(err error) {
+func ErrorHandler(err error) {
 	if err != nil {
-		//Dump("Error occoured:%s", err.Error())
-		//os.Exit(1)
-		panic(err)
+		log.Println(err)
 	}
 }
 
@@ -36,12 +43,16 @@ func Dump(format string, a ...interface{}) {
 	fmt.Println(fmt.Sprintf(format, a...))
 }
 
-func ticker(sec time.Duration, callback func(time.Time) bool) {
-	c := time.Tick(sec * time.Second)
+func DumpError(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
+func Ticker(sec time.Duration, callback func(time.Time)) {
+	c := time.Tick(sec)
 	for now := range c {
-		if callback(now) == false {
-			break
-		}
+		callback(now)
 	}
 }
 

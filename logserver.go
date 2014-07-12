@@ -4,63 +4,48 @@ import (
 	"net"
 	"flag"
 	"time"
-	"os"
-	"runtime/pprof"
 	"bytes"
 	"runtime"
 )
 
-var logType = map[string]string {
-	"1":"login",
-	"2":"act",
-	"3":"pay",
-	"4":"item",
-	"5":"error",
-	"6":"funel",
-	"7":"att",
+type LogWriter interface {
+	Write(string, []byte) error
 }
-
-var (
-	sysLog *Logger
-)
 
 type LogServer struct{
 	timeNow time.Time
-	logger map[string]*Logger
+	writer  LogWriter
 }
 
 func Listen() {
 
 	cfgFile := flag.String("c", "config.json", "Set configuration file")
-	cpuprofile := flag.String("cpuprofile", "", "Write cpu profile to file")
-	memprofile := flag.String("memprofile", "", "Write memory profile to file")
+	w := flag.String("w", "file", "Set writer")
 
 	flag.Parse()
 
-	prof(*cpuprofile, *memprofile)
-
 	loadConfig(*cfgFile)
 
-	New().listen(config["address"])
+	New(*w).listen(Config["address"])
 }
 
-func New() (server *LogServer) {
+func New(w string) (s *LogServer) {
 
-	sysLog = NewLogger(config["sys_log"])
-	defer sysLog.Close()
+	s = &LogServer{}
 
-	server = &LogServer{}
+	if w == "file" {
+		s.writer = NewFileWriter()
+	}    else {
+		s.writer = NewConsoleWriter()
+	}
 
-	server.logger = make(map[string]*Logger)
-
-	server.initLogger()
-
-	return
+	return s
+	//make(map[string]*Writer)
 }
 
 func (this *LogServer) listen(addr string) {
 	conn, err := net.ListenPacket("udp", addr)
-	PanicOnError(err)
+	DumpError(err)
 
 	defer conn.Close()
 	Dump("Listening - %s", conn.LocalAddr())
@@ -68,41 +53,6 @@ func (this *LogServer) listen(addr string) {
 	this.Read(conn)
 }
 
-func (this *LogServer) initLogger() {
-
-	var lastHour int = -1
-
-	f := func(now time.Time) bool {
-		this.timeNow = now
-
-		h := this.timeNow.Hour() //this.timeNow.Format("2006-01-02-03")
-		if lastHour != h {
-
-			lastHour = h
-
-			for k, v := range logType {
-				file := config["save_dir"] + v + "_" + this.timeNow.Format("2006-01-02-15") + ".log"
-
-				//new first, copy after
-				nf := NewLogger(file)
-
-				of, ok := this.logger[k]
-				if ok {
-					of.Close()
-				}
-				//Dump("Open file:%s", file)
-
-				this.logger[k] = nf
-			}
-		}
-
-		return true
-	}
-
-	f(time.Now())
-
-	go ticker(1, f)
-}
 
 func (this *LogServer) Read(conn net.PacketConn) {
 	c := make(chan []byte, runtime.NumCPU())
@@ -134,14 +84,14 @@ func (this *LogServer) Parse(b []byte) {
 	start := 0
 	for i := 0; i < len(b); i++ {
 		if b[i] == sep {
-			this.Write(this.Format(b[start:i]))
+			this.writer.Write(this.Format(b[start:i]))
 
 			start = i+1
 		}
 	}
 
 	//last one
-	this.Write(this.Format(b[start:]))
+	this.writer.Write(this.Format(b[start:]))
 }
 
 func (this *LogServer) Format(b []byte) (k string, buf []byte) {
@@ -160,13 +110,14 @@ func (this *LogServer) Format(b []byte) (k string, buf []byte) {
 // 1=2014-07-10 13:23:46|200|1|2|3|4|5|6|||||||||1111111111|2222222222|3333333333|from|tttttttt||||||||||||||||
 func (this *LogServer) Write(k string, b []byte) {
 	//Dump("writing: %s", b)
-	this.logger[k].Write(b)
+	this.writer.Write(k, b)
 }
 
+/*
 func prof(cpuprofile string, memprofile string) {
 	if cpuprofile != "" {
 		f, err := os.Create(cpuprofile)
-		PanicOnError(err)
+		ErrorHandler(err)
 
 		pprof.StartCPUProfile(f)
 		defer pprof.StopCPUProfile()
@@ -174,11 +125,12 @@ func prof(cpuprofile string, memprofile string) {
 
 	if memprofile != "" {
 		f, err := os.Create(memprofile)
-		PanicOnError(err)
+		ErrorHandler(err)
 
 		defer pprof.WriteHeapProfile(f)
 	}
 }
+*/
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
