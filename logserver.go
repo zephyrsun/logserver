@@ -45,14 +45,26 @@ func New(w string) (s *LogServer) {
 
 func (this *LogServer) listen(addr string) {
 	conn, err := net.ListenPacket("udp", addr)
-	DumpError(err)
+	DumpError(err, true)
 
 	defer conn.Close()
+
 	Dump("Listening - %s", conn.LocalAddr())
+
+	this.Tick()
 
 	this.Read(conn)
 }
 
+func (this *LogServer) Tick() {
+
+	t := func(now time.Time) {
+		this.timeNow = now
+	}
+
+	go Ticker(1*time.Second, t)
+
+}
 
 func (this *LogServer) Read(conn net.PacketConn) {
 	c := make(chan []byte, runtime.NumCPU())
@@ -64,14 +76,15 @@ func (this *LogServer) Read(conn net.PacketConn) {
 			n , _, err := conn.ReadFrom(buf)
 			if err == nil {
 				c <-buf[:n]
+			}else {
+				DumpError(err, false)
 			}
 		}
 	}()
 
 	for b := range c {
-		go this.Parse(b)
+		this.Parse(b)
 	}
-
 }
 
 // &分隔
@@ -84,40 +97,31 @@ func (this *LogServer) Parse(b []byte) {
 	start := 0
 	for i := 0; i < len(b); i++ {
 		if b[i] == sep {
-			this.writer.Write(this.Format(b[start:i]))
+			this.Write(b[start:i])
 
 			start = i+1
 		}
 	}
 
 	//last one
-	this.writer.Write(this.Format(b[start:]))
+	this.Write(b[start:])
 }
 
-func (this *LogServer) Format(b []byte) (k string, buf []byte) {
+func (this *LogServer) Write(b []byte) {
+
 	s := bytes.SplitN(b, []byte("="), 2)
 
-	buf = append([]byte(this.timeNow.Format("2006-01-02 15:04:05")), "|"...)
-
+	buf := append([]byte(this.timeNow.Format("2006-01-02 15:04:05")), "|"...)
 	buf = append(buf, s[1]...)
 
-	k = string(s[0])
-
-	return
-}
-
-// e.g.
-// 1=2014-07-10 13:23:46|200|1|2|3|4|5|6|||||||||1111111111|2222222222|3333333333|from|tttttttt||||||||||||||||
-func (this *LogServer) Write(k string, b []byte) {
-	//Dump("writing: %s", b)
-	this.writer.Write(k, b)
+	this.writer.Write(string(s[0]), buf)
 }
 
 /*
 func prof(cpuprofile string, memprofile string) {
 	if cpuprofile != "" {
 		f, err := os.Create(cpuprofile)
-		ErrorHandler(err)
+		DumpError(err, true)
 
 		pprof.StartCPUProfile(f)
 		defer pprof.StopCPUProfile()
@@ -125,7 +129,7 @@ func prof(cpuprofile string, memprofile string) {
 
 	if memprofile != "" {
 		f, err := os.Create(memprofile)
-		ErrorHandler(err)
+		DumpError(err, true)
 
 		defer pprof.WriteHeapProfile(f)
 	}

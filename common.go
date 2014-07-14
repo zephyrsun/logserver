@@ -3,7 +3,6 @@ package logserver
 import (
 	"fmt"
 	"time"
-	"log"
 	"io/ioutil"
 	"encoding/json"
 )
@@ -27,26 +26,28 @@ var Config = configType{
 
 func loadConfig(file string) {
 	b, err := ioutil.ReadFile(file)
-	if err == nil {
-		err = json.Unmarshal(b, &Config)
-		ErrorHandler(err)
-	}
-}
+	DumpError(err, true)
 
-func ErrorHandler(err error) {
-	if err != nil {
-		log.Println(err)
-	}
+	err = json.Unmarshal(b, &Config)
+	DumpError(err, true)
 }
 
 func Dump(format string, a ...interface{}) {
 	fmt.Println(fmt.Sprintf(format, a...))
 }
 
-func DumpError(err error) {
+func DumpError(err error, exit bool) {
 	if err != nil {
-		panic(err)
+		if exit {
+			panic(err)
+		}else {
+			Dump("error: %s", err.Error())
+		}
 	}
+}
+
+func FormatLog() {
+
 }
 
 func Ticker(sec time.Duration, callback func(time.Time)) {

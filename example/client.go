@@ -10,7 +10,7 @@ import (
 func main() {
 
 	addr := flag.String("addr", ":8282", "Server address")
-	r := flag.Int("r", 2, "Number of routing")
+	c := flag.Int("c", 10000, "Number of multiple requests to make")
 	n := flag.Int("n", 100000, "Number of requests to perform")
 	d := flag.String("d", "1=2014-07-10 13:57:40|200|1|2|3|4|5|6|||||||||1111111111|2222222222|3333333333|from|tttttttt||||||||||||||||&2=2014-07-10 14:14:58|2014-07-10 13:57:40|200|1|2|3|4|5|6|||||||||1111111111|2222222222|3333333333|from|tttttttt||||||||||||||||", "Data to be sent")
 
@@ -18,25 +18,26 @@ func main() {
 
 	b := []byte(*d)
 
-	t := time.Now()
+	max := *n / (*c)
 
-	c := make(chan int, *r)
+	doSend := func() {
+		conn, err := net.Dial("udp", *addr)
+		logserver.DumpError(err, true)
 
-	for i := 0; i < *r; i++ {
-		go func() {
-			conn, err := net.Dial("udp", *addr)
-			logserver.PanicOnError(err)
+		i := 0
+		for ; i < *c; i++ {
+			_, err := conn.Write(b)
+			logserver.DumpError(err, true)
 
-			i := 0
-			for ; i < *n/(*r); i++ {
-				_, err := conn.Write(b)
-				logserver.PanicOnError(err)
-			}
+			//logserver.Dump("%s,%s", conn, b)
+		}
 
-			c<-i
-		}()
-		logserver.Dump("written: %d", <-c)
+		logserver.Dump("requested number:%d", i)
 	}
 
+	t := time.Now()
+	for i := 0; i < max; i++ {
+		doSend()
+	}
 	logserver.Dump("Done! time:%s", time.Now().Sub(t))
 }

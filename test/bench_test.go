@@ -5,50 +5,27 @@ import (
 	"github.com/zephyrsun/logserver"
 )
 
+var str string = "1=2014-07-10 10:47:08|kingnetdc|activation|600||||1|||||||||1111111111|2222222222|3333333333|from|tttttttt||||||||||||||||&2=2014-07-10 10:47:08|700|1|||||1|||||||||1111111111|2222222222|3333333333|from|tttttttt||||||||||||||||"
+var strByte []byte = []byte(str)
+
+
 func BenchmarkParse(b *testing.B) {
 	srv := logserver.New("console")
 
-	str := "1=2014-07-10 10:47:08|kingnetdc|activation|600||||1|||||||||1111111111|2222222222|3333333333|from|tttttttt||||||||||||||||&2=2014-07-10 10:47:08|700|1|||||1|||||||||1111111111|2222222222|3333333333|from|tttttttt||||||||||||||||"
-	strByte := []byte(str)
-
-	for i := 0; i < b.N; i++ { //use b.N for looping
+	for i := 0; i < b.N ; i++ { //use b.N for looping
 		srv.Parse(strByte)
 	}
 }
 
+/*
 func BenchmarkWrite(b *testing.B) {
 	srv := logserver.New("file")
 
-	k1 := "1"
-	str1 := "2014-07-10 10:47:08|kingnetdc|activation|600||||1|||||||||1111111111|2222222222|3333333333|from|tttttttt||||||||||||||||"
-	strByte1 := []byte(str1)
-
-	k2 := "2"
-	str2 := "2014-07-10 10:47:08|700|1|||||1|||||||||1111111111|2222222222|3333333333|from|tttttttt||||||||||||||||"
-	strByte2 := []byte(str2)
-
-	c1 := make(chan int)
-	c2 := make(chan int)
-
-	go func() {
-		for {
-			<-c1
-			srv.Write(k1, strByte1)
-		}
-	}()
-
-	go func() {
-		for {
-			<-c2
-			srv.Write(k2, strByte2)
-		}
-	}()
-
 	for i := 0; i < b.N; i++ { //use b.N for looping
-		c1<-i
-		c2<-i
+		print(srv)//.Parse(strByte)
 	}
 }
+*/
 
 /*
 func BenchmarkServer2(b *testing.B) {
