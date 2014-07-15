@@ -32,7 +32,7 @@ func main() {
 			//logserver.Dump("%s,%s", conn, b)
 		}
 
-		logserver.Dump("requested number:%d", i)
+		logserver.Dump("requested:%d", i)
 	}
 
 	t := time.Now()

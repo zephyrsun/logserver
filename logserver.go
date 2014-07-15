@@ -67,7 +67,7 @@ func (this *LogServer) Tick() {
 }
 
 func (this *LogServer) Read(conn net.PacketConn) {
-	c := make(chan []byte, runtime.NumCPU())
+	c := make(chan []byte)//, runtime.NumCPU()
 
 	buf := make([]byte, 2048) //var buf [2048]byte
 
