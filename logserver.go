@@ -82,8 +82,8 @@ func (this *LogServer) Read(conn net.PacketConn) {
 		}
 	}()
 
-	for b := range c {
-		this.Parse(b)
+	for {
+		this.Parse(<-c)
 	}
 }
 

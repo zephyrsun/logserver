@@ -36,8 +36,7 @@ func (this *FileWriter) Write(k string, b []byte) error {
 
 func (this *FileWriter) Rotate(now time.Time) {
 
-
-	this.Flush()
+	//this.Flush()
 
 	h := now.Hour() //this.timeNow.Format("2006-01-02-03")
 	if this.lastHour == h {
