@@ -27,7 +27,7 @@ type FileWriter struct {
 func (this *FileWriter) Write(k string, b []byte) error {
 	b = append(b, eol...)
 
-	_, err := this.writers[k].Write(b)
+	_, err := this.files[k].Write(b)
 
 	DumpError(err, false)
 
@@ -36,8 +36,7 @@ func (this *FileWriter) Write(k string, b []byte) error {
 
 func (this *FileWriter) Rotate(now time.Time) {
 
-
-	this.Flush()
+	//this.Flush()
 
 	h := now.Hour() //this.timeNow.Format("2006-01-02-03")
 	if this.lastHour == h {
@@ -57,6 +56,7 @@ func (this *FileWriter) Rotate(now time.Time) {
 		}
 
 		//new writer
+		/*
 		ow, ok := this.writers[k]
 		if ok {
 			ow.Flush()
@@ -64,6 +64,7 @@ func (this *FileWriter) Rotate(now time.Time) {
 		}else {
 			this.writers[k] = bufio.NewWriterSize(f, bufSize)
 		}
+		*/
 
 		// close file
 		of, ok := this.files[k]
@@ -116,7 +117,7 @@ func NewFileWriter() *FileWriter {
 	fw.files = make(map[string]*os.File)
 	fw.writers = make(map[string]*bufio.Writer)
 
-	fw.listenExit()
+	//fw.listenExit()
 
 	fw.Rotate(time.Now())
 	go Ticker(1*time.Second, fw.Rotate)
