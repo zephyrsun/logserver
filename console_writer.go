@@ -7,9 +7,8 @@ import (
 type ConsoleWriter struct {
 }
 
-func (this *ConsoleWriter) Write(k string, b []byte) error {
-	_, err := fmt.Println(logType[k] + ":" + string(b))
-	return err
+func (this *ConsoleWriter) Write(k string, b []byte) (int, error) {
+	return fmt.Println(logType[k] + ":" + string(b))
 }
 
 func NewConsoleWriter() *ConsoleWriter {

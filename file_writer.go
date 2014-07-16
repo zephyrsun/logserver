@@ -4,9 +4,6 @@ import (
 	"os"
 	"path"
 	"time"
-	"bufio"
-	"os/signal"
-	"syscall"
 )
 
 const (
@@ -14,36 +11,26 @@ const (
 	bufSize = 8192
 )
 
-var (
-
-)
-
 type FileWriter struct {
-	files    map[string]*os.File
-	writers map[string]*bufio.Writer
+	writers    map[string]*os.File
+	//writers map[string]*bufio.Writer
 	lastHour int
 }
 
-func (this *FileWriter) Write(k string, b []byte) error {
+func (this *FileWriter) Write(k string, b []byte) (int, error) {
 	b = append(b, eol...)
 
-	_, err := this.writers[k].Write(b)
-
-	DumpError(err, false)
-
-	return err
+	return this.writers[k].Write(b)
 }
 
 func (this *FileWriter) Rotate(now time.Time) {
-
-	//this.Flush()
-
 	h := now.Hour() //this.timeNow.Format("2006-01-02-03")
 	if this.lastHour == h {
 		return
 	}
 
 	this.lastHour = h
+	//print(h)
 
 	for k, v := range logType {
 
@@ -51,71 +38,27 @@ func (this *FileWriter) Rotate(now time.Time) {
 
 		//new file
 		f, err := newFile(filename)
-		if err != nil {
-			continue
-		}
+		DumpError(err, false)
 
-		//new writer
-		ow, ok := this.writers[k]
-		if ok {
-			ow.Flush()
-			ow.Reset(f)
-		}else {
-			this.writers[k] = bufio.NewWriterSize(f, bufSize)
-		}
-
-		// close file
-		of, ok := this.files[k]
-		if ok {
-			of.Close()
-		}
-
-		this.files[k] = f
+		this.writers[k] = f
 	}
-}
-
-func (this *FileWriter) Flush() {
-	for k, _ := range logType {
-		w, ok := this.writers[k]
-		if ok {
-			w.Flush()
-		}
-	}
-}
-
-func (this *FileWriter) listenExit() {
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch,
-		syscall.SIGINT)
-
-	go func() {
-		<-ch
-		this.Flush()
-
-		os.Exit(1)
-	}()
 }
 
 func newFile(f string) ( *os.File, error) {
 	os.MkdirAll(path.Dir(f), 0755)
 	//PanicOnError(err)
-
-	file, err := os.OpenFile(f, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0655)
-
-	DumpError(err, false)
-
-	return file, err
+	return os.OpenFile(f, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0655)
 }
 
 func NewFileWriter() *FileWriter {
-	fw := &FileWriter{}
+	fw := &FileWriter{
+		lastHour:-1,
+		writers:make(map[string]*os.File),
+	}
 
-	fw.lastHour = -1
-
-	fw.files = make(map[string]*os.File)
-	fw.writers = make(map[string]*bufio.Writer)
-
-	fw.listenExit()
+	//fw.files = make(map[string]*os.File)
+	//fw.writers = make(map[string]*bufio.Writer)
+	//fw.listenExit()
 
 	fw.Rotate(time.Now())
 	go Ticker(1*time.Second, fw.Rotate)
