@@ -4,17 +4,49 @@ import (
 	"os"
 	"path"
 	"time"
+	"bufio"
 )
 
 const (
 	eol     = "\n"
-	bufSize = 8192
+	bufSize = 1024 * 1024
 )
 
+func newFile(name string) ( *os.File, error) {
+	os.MkdirAll(path.Dir(name), 0755)
+	//PanicOnError(err)
+	return os.OpenFile(name, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0655)
+}
+
+func NewBufWriter(name string) (*BufWriter, error) {
+	f, err := newFile(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return &BufWriter{f, bufio.NewWriterSize(f, bufSize)}, nil
+}
+
+type BufWriter struct{
+	file *os.File
+	writer *bufio.Writer
+}
+
+func (this *BufWriter) Write(b []byte) (int, error) {
+	return this.writer.Write(b)
+}
+
+func (this *BufWriter) Close() error {
+	return this.file.Close()
+}
+
+func (this *BufWriter) Flush() error {
+	return this.writer.Flush()
+}
+
 type FileWriter struct {
-	writers    map[string]*os.File
-	//writers map[string]*bufio.Writer
 	lastHour int
+	writers    map[string]*BufWriter
 }
 
 func (this *FileWriter) Write(k string, b []byte) (int, error) {
@@ -36,32 +68,37 @@ func (this *FileWriter) Rotate(now time.Time) {
 
 		filename := Config["save_dir"] + v + "_" + now.Format("2006-01-02-15") + ".log"
 
-		//new file
-		f, err := newFile(filename)
-		DumpError(err, false)
+		new, err := NewBufWriter(filename)
+		if err == nil {
+			old, ok := this.writers[k]
+			if ok {
+				old.Flush()
+				old.Close()
+			}
 
-		this.writers[k] = f
+			this.writers[k] = new
+		}
 	}
 }
 
-func newFile(f string) ( *os.File, error) {
-	os.MkdirAll(path.Dir(f), 0755)
-	//PanicOnError(err)
-	return os.OpenFile(f, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0655)
+func (this *FileWriter) Flush() {
+	for k, _ := range logType {
+		this.writers[k].Flush()
+	}
 }
 
 func NewFileWriter() *FileWriter {
-	fw := &FileWriter{
-		lastHour:-1,
-		writers:make(map[string]*os.File),
-	}
+	fw := &FileWriter{-1, make(map[string]*BufWriter)}
 
 	//fw.files = make(map[string]*os.File)
 	//fw.writers = make(map[string]*bufio.Writer)
 	//fw.listenExit()
 
 	fw.Rotate(time.Now())
-	go Ticker(1*time.Second, fw.Rotate)
+	go Ticker(1*time.Second, func(now time.Time) {
+			fw.Rotate(now)
+			fw.Flush()
+		})
 
 	return fw
 }

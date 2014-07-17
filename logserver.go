@@ -14,29 +14,31 @@ type LogWriter interface {
 
 type LogServer struct{
 	timeNow time.Time
-	writer  LogWriter
+	wr      LogWriter
 }
 
 func Listen() {
 
 	cfgFile := flag.String("c", "config.json", "Set configuration file")
-	w := flag.String("w", "file", "Set writer")
 
 	flag.Parse()
 
 	loadConfig(*cfgFile)
 
-	New(*w).listen(Config["address"])
+	New().listen(Config["address"])
 }
 
-func New(w string) (s *LogServer) {
+func New() (s *LogServer) {
 
 	s = &LogServer{}
 
-	if w == "file" {
-		s.writer = NewFileWriter()
-	}    else {
-		s.writer = NewConsoleWriter()
+	switch Config["writer"] {
+	case "console":
+		s.wr = NewConsoleWriter()
+	case "file":
+		fallthrough
+	default:
+		s.wr = NewFileWriter()
 	}
 
 	return s
@@ -44,7 +46,11 @@ func New(w string) (s *LogServer) {
 }
 
 func (this *LogServer) listen(addr string) {
-	conn, err := net.ListenPacket("udp", addr)
+
+	la, err := net.ResolveUDPAddr("udp", addr)
+	DumpError(err, true)
+
+	conn, err := net.ListenUDP("udp", la)
 	DumpError(err, true)
 
 	defer conn.Close()
@@ -66,21 +72,19 @@ func (this *LogServer) Tick() {
 
 }
 
-func (this *LogServer) Read(conn net.PacketConn) {
-	ch := make(chan []byte)//, runtime.NumCPU()
+func (this *LogServer) Read(conn *net.UDPConn) {
+	ch := make(chan []byte, 4096)//, runtime.NumCPU()
 
 	buf := make([]byte, 2048) //var buf [2048]byte
 
-	for i := 0; i < runtime.NumCPU(); i++ {
-		go func() {
-			for {
-				this.Parse(<-ch)
-			}
-		}()
-	}
+	go func() {
+		for {
+			this.Parse(<-ch)
+		}
+	}()
 
 	for {
-		n , _, err := conn.ReadFrom(buf)
+		n , _, err := conn.ReadFromUDP(buf)
 		if err == nil {
 			ch <-buf[:n]
 		}else {
@@ -116,7 +120,7 @@ func (this *LogServer) Write(b []byte) {
 	buf := append([]byte(this.timeNow.Format("2006-01-02 15:04:05")), "|"...)
 	buf = append(buf, s[1]...)
 
-	_, err := this.writer.Write(string(s[0]), buf)
+	_, err := this.wr.Write(string(s[0]), buf)
 	DumpError(err, false)
 }
 
