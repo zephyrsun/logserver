@@ -71,19 +71,21 @@ func (this *LogServer) Read(conn net.PacketConn) {
 
 	buf := make([]byte, 2048) //var buf [2048]byte
 
-	go func() {
-		for {
-			n , _, err := conn.ReadFrom(buf)
-			if err == nil {
-				ch <-buf[:n]
-			}else {
-				DumpError(err, false)
+	for i := 0; i < runtime.NumCPU(); i++ {
+		go func() {
+			for {
+				this.Parse(<-ch)
 			}
-		}
-	}()
+		}()
+	}
 
 	for {
-		this.Parse(<-ch)
+		n , _, err := conn.ReadFrom(buf)
+		if err == nil {
+			ch <-buf[:n]
+		}else {
+			DumpError(err, false)
+		}
 	}
 }
 
