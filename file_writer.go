@@ -4,7 +4,6 @@ import (
 	"os"
 	"path"
 	"time"
-	"bufio"
 )
 
 const (
@@ -18,35 +17,9 @@ func newFile(name string) ( *os.File, error) {
 	return os.OpenFile(name, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0655)
 }
 
-func NewBufWriter(name string) (*BufWriter, error) {
-	f, err := newFile(name)
-	if err != nil {
-		return nil, err
-	}
-
-	return &BufWriter{f, bufio.NewWriterSize(f, bufSize)}, nil
-}
-
-type BufWriter struct{
-	file *os.File
-	writer *bufio.Writer
-}
-
-func (this *BufWriter) Write(b []byte) (int, error) {
-	return this.writer.Write(b)
-}
-
-func (this *BufWriter) Close() error {
-	return this.file.Close()
-}
-
-func (this *BufWriter) Flush() error {
-	return this.writer.Flush()
-}
-
 type FileWriter struct {
 	lastHour int
-	writers    map[string]*BufWriter
+	writers    map[string]*os.File
 }
 
 func (this *FileWriter) Write(k string, b []byte) (int, error) {
@@ -68,37 +41,64 @@ func (this *FileWriter) Rotate(now time.Time) {
 
 		filename := Config["save_dir"] + v + "_" + now.Format("2006-01-02-15") + ".log"
 
-		new, err := NewBufWriter(filename)
+		new, err := newFile(filename)
 		if err == nil {
+
 			old, ok := this.writers[k]
-			if ok {
-				old.Flush()
-				old.Close()
-			}
 
 			this.writers[k] = new
+
+			if ok {
+				old.Close()
+			}
 		}
 	}
 }
 
-func (this *FileWriter) Flush() {
-	for k, _ := range logType {
-		this.writers[k].Flush()
-	}
-}
-
 func NewFileWriter() *FileWriter {
-	fw := &FileWriter{-1, make(map[string]*BufWriter)}
+	fw := &FileWriter{-1, make(map[string]*os.File)}
 
 	//fw.files = make(map[string]*os.File)
 	//fw.writers = make(map[string]*bufio.Writer)
 	//fw.listenExit()
 
 	fw.Rotate(time.Now())
-	go Ticker(1*time.Second, func(now time.Time) {
-			fw.Rotate(now)
-			fw.Flush()
-		})
+	go Ticker(1*time.Second, fw.Rotate)
 
 	return fw
 }
+
+/*
+func (this *FileWriter) Flush() {
+	for k, _ := range logType {
+		this.writers[k].Flush()
+	}
+}
+
+func NewBufWriter(name string) (*BufWriter, error) {
+	f, err := newFile(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return &BufWriter{f, bufio.NewWriterSize(f, bufSize)}, nil
+}
+
+type BufWriter struct{
+	file *os.File
+	writer *bufio.Writer
+}
+
+func (this *BufWriter) Write(b []byte) (int, error) {
+	return this.file.Write(b)
+}
+
+func (this *BufWriter) Close() error {
+	return this.file.Close()
+}
+
+func (this *BufWriter) Flush() error {
+	return this.writer.Flush()
+}
+
+ */
