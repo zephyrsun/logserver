@@ -22,10 +22,9 @@ type FileWriter struct {
 	writers    map[string]*os.File
 }
 
-func (this *FileWriter) Write(k string, b []byte) (int, error) {
-	b = append(b, eol...)
-
-	return this.writers[k].Write(b)
+func (this *FileWriter) Write(k string, b []byte) {
+	_, err := this.writers[k].Write(append(b, eol...))
+	DumpError(err,false)
 }
 
 func (this *FileWriter) Rotate(now time.Time) {

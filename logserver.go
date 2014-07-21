@@ -9,7 +9,7 @@ import (
 )
 
 type LogWriter interface {
-	Write(string, []byte) (int, error)
+	Write(string, []byte)
 }
 
 type LogServer struct{
@@ -77,9 +77,18 @@ func (this *LogServer) Read(conn *net.UDPConn) {
 
 	buf := make([]byte, 2048) //var buf [2048]byte
 
+	/*
+	count := 0
+	go Ticker(1*time.Second, func(time.Time) {
+			print(count)
+		})
+	*/
+
 	go func() {
 		for {
 			this.Parse(<-ch)
+			//<-ch
+			//count++
 		}
 	}()
 
@@ -120,8 +129,7 @@ func (this *LogServer) Write(b []byte) {
 	buf := append([]byte(this.timeNow.Format("2006-01-02 15:04:05")), "|"...)
 	buf = append(buf, s[1]...)
 
-	_, err := this.wr.Write(string(s[0]), buf)
-	DumpError(err, false)
+	this.wr.Write(string(s[0]), buf)
 }
 
 /*
