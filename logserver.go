@@ -45,7 +45,7 @@ func New() (s *LogServer) {
 	//make(map[string]*Writer)
 }
 
-func (this *LogServer) listen(addr string) {
+func (o *LogServer) listen(addr string) {
 
 	la, err := net.ResolveUDPAddr("udp", addr)
 	DumpError(err, true)
@@ -57,53 +57,52 @@ func (this *LogServer) listen(addr string) {
 
 	Dump("Listening - %s", conn.LocalAddr())
 
-	this.Tick()
+	o.Tick()
 
-	this.Read(conn)
+	o.Read(conn)
 }
 
-func (this *LogServer) Tick() {
+func (o *LogServer) Tick() {
 
 	t := func(now time.Time) {
-		this.timeNow = now
+		o.timeNow = now
 	}
 
 	go Ticker(1*time.Second, t)
 
 }
 
-func (this *LogServer) Read(conn *net.UDPConn) {
-	ch := make(chan []byte, 1024*1024)//, runtime.NumCPU()
+func (o *LogServer) Read(conn *net.UDPConn) {
+	writeBuf := make(chan []byte, 10*1024*1024)//, runtime.NumCPU()
 
-	buf := make([]byte, 2048) //var buf [2048]byte
+	readBuf := make([]byte, 2048) //var buf [2048]byte
 
 	/*
-	count := 0
-	go Ticker(1*time.Second, func(time.Time) {
-			print(count)
-		})
+		count := 0
+		go Ticker(1*time.Second, func(time.Time) {
+				print(count)
+			})
 	*/
+
 
 	go func() {
 		for {
-			this.Parse(<-ch)
-			//<-ch
-			//count++
+			n , _, err := conn.ReadFromUDP(readBuf)
+			if err == nil {
+				writeBuf <-readBuf[:n]
+			}else {
+				DumpError(err, false)
+			}
 		}
 	}()
 
 	for {
-		n , _, err := conn.ReadFromUDP(buf)
-		if err == nil {
-			ch <-buf[:n]
-		}else {
-			DumpError(err, false)
-		}
+		o.Parse(<-writeBuf)
 	}
 }
 
 // &分隔
-func (this *LogServer) Parse(b []byte) {
+func (o *LogServer) Parse(b []byte) {
 
 	//arr := strings.Split(log, "&")
 
@@ -112,24 +111,24 @@ func (this *LogServer) Parse(b []byte) {
 	start := 0
 	for i := 0; i < len(b); i++ {
 		if b[i] == sep {
-			this.Write(b[start:i])
+			o.Write(b[start:i])
 
 			start = i+1
 		}
 	}
 
 	//last one
-	this.Write(b[start:])
+	o.Write(b[start:])
 }
 
-func (this *LogServer) Write(b []byte) {
+func (o *LogServer) Write(b []byte) {
 
 	s := bytes.SplitN(b, []byte("="), 2)
 
-	buf := append([]byte(this.timeNow.Format("2006-01-02 15:04:05")), "|"...)
+	buf := append([]byte(o.timeNow.Format("2006-01-02 15:04:05")), "|"...)
 	buf = append(buf, s[1]...)
 
-	this.wr.Write(string(s[0]), buf)
+	o.wr.Write(string(s[0]), buf)
 }
 
 /*

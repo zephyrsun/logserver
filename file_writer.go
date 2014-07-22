@@ -8,7 +8,7 @@ import (
 
 const (
 	eol     = "\n"
-	bufSize = 1024 * 1024
+	bufSize = 10 * 1024 * 1024
 )
 
 func newFile(name string) ( *os.File, error) {
@@ -19,12 +19,12 @@ func newFile(name string) ( *os.File, error) {
 
 type FileWriter struct {
 	lastHour int
-	writers    map[string]*os.File
+	wr    map[string]*os.File
 }
 
 func (this *FileWriter) Write(k string, b []byte) {
-	_, err := this.writers[k].Write(append(b, eol...))
-	DumpError(err,false)
+	_, err := this.wr[k].Write(append(b, eol...))
+	DumpError(err, false)
 }
 
 func (this *FileWriter) Rotate(now time.Time) {
@@ -33,9 +33,10 @@ func (this *FileWriter) Rotate(now time.Time) {
 		return
 	}
 
-	this.lastHour = h
+	//this.lastHour = h
 	//print(h)
 
+	oldMap := make([]*os.File, len(logType))
 	for k, v := range logType {
 
 		filename := Config["save_dir"] + v + "_" + now.Format("2006-01-02-15") + ".log"
@@ -43,14 +44,19 @@ func (this *FileWriter) Rotate(now time.Time) {
 		new, err := newFile(filename)
 		if err == nil {
 
-			old, ok := this.writers[k]
+			old, ok := this.wr[k]
 
-			this.writers[k] = new
+			this.wr[k] = new
 
 			if ok {
-				old.Close()
+				//old.Close()
+				oldMap = append(oldMap, old)
 			}
 		}
+	}
+
+	for _, old := range oldMap {
+		old.Close()
 	}
 }
 
@@ -67,37 +73,3 @@ func NewFileWriter() *FileWriter {
 	return fw
 }
 
-/*
-func (this *FileWriter) Flush() {
-	for k, _ := range logType {
-		this.writers[k].Flush()
-	}
-}
-
-func NewBufWriter(name string) (*BufWriter, error) {
-	f, err := newFile(name)
-	if err != nil {
-		return nil, err
-	}
-
-	return &BufWriter{f, bufio.NewWriterSize(f, bufSize)}, nil
-}
-
-type BufWriter struct{
-	file *os.File
-	writer *bufio.Writer
-}
-
-func (this *BufWriter) Write(b []byte) (int, error) {
-	return this.file.Write(b)
-}
-
-func (this *BufWriter) Close() error {
-	return this.file.Close()
-}
-
-func (this *BufWriter) Flush() error {
-	return this.writer.Flush()
-}
-
- */
