@@ -8,13 +8,23 @@ import (
 	"runtime"
 )
 
+const (
+	bufSize = 1024 * 1024
+)
+
 type LogWriter interface {
 	Write(string, []byte)
+}
+
+type BufLogWriter interface {
+	Rotate(time.Time)
+	Flush()
 }
 
 type LogServer struct{
 	timeNow time.Time
 	wr      LogWriter
+	buf     []byte
 }
 
 func Listen() {
@@ -30,7 +40,7 @@ func Listen() {
 
 func New() (s *LogServer) {
 
-	s = &LogServer{}
+	s = &LogServer{buf:make([]byte, bufSize)}
 
 	switch Config["writer"] {
 	case "console":
@@ -73,7 +83,7 @@ func (o *LogServer) Tick() {
 }
 
 func (o *LogServer) Read(conn *net.UDPConn) {
-	writeBuf := make(chan []byte, 10*1024*1024)//, runtime.NumCPU()
+	writeBuf := make(chan []byte, 10*bufSize)//, runtime.NumCPU()
 
 	readBuf := make([]byte, 2048) //var buf [2048]byte
 
@@ -96,8 +106,19 @@ func (o *LogServer) Read(conn *net.UDPConn) {
 		}
 	}()
 
+	flushTimer := time.Tick(1 * time.Second)
+
 	for {
-		o.Parse(<-writeBuf)
+		select {
+		case b := <-writeBuf:
+			o.Parse(b)
+
+		case now := <-flushTimer:
+			if m, ok := o.wr.(BufLogWriter); ok {
+				m.Flush()
+				m.Rotate(now)
+			}
+		}
 	}
 }
 
@@ -125,10 +146,10 @@ func (o *LogServer) Write(b []byte) {
 
 	s := bytes.SplitN(b, []byte("="), 2)
 
-	buf := append([]byte(o.timeNow.Format("2006-01-02 15:04:05")), "|"...)
-	buf = append(buf, s[1]...)
+	o.buf = []byte(o.timeNow.Format("2006-01-02 15:04:05")+"|")
+	o.buf = append(o.buf, s[1]...)
 
-	o.wr.Write(string(s[0]), buf)
+	o.wr.Write(string(s[0]), o.buf)
 }
 
 /*
