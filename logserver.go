@@ -16,7 +16,7 @@ type LogWriter interface {
 	Write(string, []byte)
 }
 
-type BufLogWriter interface {
+type FileLogWriter interface {
 	Rotate(time.Time)
 	Flush()
 }
@@ -83,7 +83,7 @@ func (o *LogServer) Tick() {
 }
 
 func (o *LogServer) Read(conn *net.UDPConn) {
-	writeBuf := make(chan []byte, 10*bufSize)//, runtime.NumCPU()
+	writeBuf := make(chan []byte, 15*bufSize)//, runtime.NumCPU()
 
 	readBuf := make([]byte, 2048) //var buf [2048]byte
 
@@ -114,7 +114,7 @@ func (o *LogServer) Read(conn *net.UDPConn) {
 			o.Parse(b)
 
 		case now := <-flushTimer:
-			if m, ok := o.wr.(BufLogWriter); ok {
+			if m, ok := o.wr.(FileLogWriter); ok {
 				m.Flush()
 				m.Rotate(now)
 			}

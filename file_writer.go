@@ -4,6 +4,8 @@ import (
 	"os"
 	"path"
 	"time"
+	"os/signal"
+	"syscall"
 )
 
 const (
@@ -53,7 +55,7 @@ func (o *bufWriter) Rotate(now time.Time) {
 func newBufWriter(name string) *bufWriter {
 	w := &bufWriter{
 		name:name,
-		buf:make([]byte, 10*bufSize),
+		buf:make([]byte, 20*bufSize),
 	}
 
 	w.Rotate(time.Now())
@@ -69,7 +71,7 @@ func (o *FileWriter) Write(k string, b []byte) {
 	o.wr[k].Write(append(b, eol...))
 }
 
-func (o *FileWriter) Rotate(now time.Time)  {
+func (o *FileWriter) Rotate(now time.Time) {
 	h := now.Hour()
 	if o.lastHour == h {
 		return
@@ -89,6 +91,24 @@ func (o *FileWriter) Flush() {
 	}
 }
 
+func (o *FileWriter) ListenExit() {
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT,
+	)
+	go func() {
+		<-sig
+
+		Dump("Flushing data...")
+		o.Flush()
+
+		os.Exit(1)
+	}()
+}
+
 func NewFileWriter() *FileWriter {
 
 	wr := make(map[string]*bufWriter, len(logType))
@@ -97,6 +117,8 @@ func NewFileWriter() *FileWriter {
 	}
 
 	fw := &FileWriter{-1, wr}
+
+	fw.ListenExit()
 
 	return fw
 }
