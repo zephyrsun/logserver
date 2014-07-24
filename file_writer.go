@@ -81,7 +81,7 @@ func (o *FileWriter) Rotate(now time.Time) {
 		return
 	}
 
-	//o.lastHour = h
+	o.lastHour = h
 	//print(h)
 
 	for k, name := range logType {
