@@ -4,8 +4,6 @@ import (
 	"os"
 	"path"
 	"time"
-	"os/signal"
-	"syscall"
 )
 
 const (
@@ -97,24 +95,6 @@ func (o *FileWriter) Rotate(now time.Time) {
 	}
 }
 
-func (o *FileWriter) ListenExit() {
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig,
-		syscall.SIGHUP,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGQUIT,
-	)
-	go func() {
-		<-sig
-
-		Dump("Flushing data...")
-		o.Flush()
-
-		os.Exit(1)
-	}()
-}
-
 func NewFileWriter() *FileWriter {
 
 	/*
@@ -131,8 +111,6 @@ func NewFileWriter() *FileWriter {
 	fw.Rotate(time.Now())
 
 	go Ticker(1*time.Second, fw.Rotate)
-
-	fw.ListenExit()
 
 	return fw
 }
