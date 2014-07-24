@@ -16,9 +16,8 @@ type LogWriter interface {
 	Write(string, []byte)
 }
 
-type BufLogWriter interface {
+type FileLogWriter interface {
 	Rotate(time.Time)
-	Flush()
 }
 
 type LogServer struct{
@@ -106,8 +105,12 @@ func (o *LogServer) Read(conn *net.UDPConn) {
 		}
 	}()
 
-	flushTimer := time.Tick(1 * time.Second)
+	for {
+		o.Parse(<-writeBuf)
+	}
 
+	/*
+	flushTimer := time.Tick(1 * time.Second)
 	for {
 		select {
 		case b := <-writeBuf:
@@ -120,6 +123,7 @@ func (o *LogServer) Read(conn *net.UDPConn) {
 			}
 		}
 	}
+	*/
 }
 
 // &分隔
