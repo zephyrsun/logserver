@@ -150,7 +150,7 @@ func (o *LogServer) Write(b []byte) {
 
 	s := bytes.SplitN(b, []byte("="), 2)
 
-	o.buf = append([]byte(o.timeNow.Format("2006-01-02 15:04:05")), "|")
+	o.buf = append([]byte(o.timeNow.Format("2006-01-02 15:04:05")), "|"...)
 	o.buf = append(o.buf, s[1]...)
 
 	o.wr.Write(string(s[0]), o.buf)
