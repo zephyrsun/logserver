@@ -4,8 +4,6 @@ import (
 	"os"
 	"path"
 	"time"
-	"os/signal"
-	"syscall"
 )
 
 const (
@@ -29,12 +27,15 @@ type bufWriter struct{
 
 func (o *bufWriter) Write(b []byte) {
 	o.buf = append(o.buf, b...)
+	o.buf = append(o.buf, eol...)
 }
 
 func (o *bufWriter) Flush() {
-	o.wr.Write(o.buf)
 
+	buf := o.buf
 	o.buf = o.buf[:0]
+
+	o.wr.Write(buf)
 }
 
 func (o *bufWriter) Close() {
@@ -43,19 +44,19 @@ func (o *bufWriter) Close() {
 }
 
 func (o *bufWriter) Rotate(now time.Time) {
-	f := Config["save_dir"] + o.name + "_" + now.Format("2006-01-02-15") + ".log"
-
-	wr := newFile(f)
 
 	o.Close()
 
-	o.wr = wr
+	f := Config["save_dir"] + o.name + "_" + now.Format("2006-01-02-15") + ".log"
+
+	o.wr = newFile(f)
 }
 
 func newBufWriter(name string) *bufWriter {
+	buf := make([]byte, 5*bufSize)
 	w := &bufWriter{
 		name:name,
-		buf:make([]byte, 20*bufSize),
+		buf:buf[:0],
 	}
 
 	w.Rotate(time.Now())
@@ -68,7 +69,7 @@ type FileWriter struct {
 }
 
 func (o *FileWriter) Write(k string, b []byte) {
-	o.wr[k].Write(append(b, eol...))
+	o.wr[k].Write(b)
 }
 
 func (o *FileWriter) Rotate(now time.Time) {
@@ -91,24 +92,6 @@ func (o *FileWriter) Flush() {
 	}
 }
 
-func (o *FileWriter) ListenExit() {
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig,
-		syscall.SIGHUP,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGQUIT,
-	)
-	go func() {
-		<-sig
-
-		Dump("Flushing data...")
-		o.Flush()
-
-		os.Exit(1)
-	}()
-}
-
 func NewFileWriter() *FileWriter {
 
 	wr := make(map[string]*bufWriter, len(logType))
@@ -118,7 +101,10 @@ func NewFileWriter() *FileWriter {
 
 	fw := &FileWriter{-1, wr}
 
-	fw.ListenExit()
+	go Ticker(1*time.Second, func(now time.Time) {
+			fw.Rotate(now)
+			fw.Flush()
+		})
 
 	return fw
 }

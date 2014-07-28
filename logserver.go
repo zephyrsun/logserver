@@ -4,8 +4,11 @@ import (
 	"net"
 	"flag"
 	"time"
-	"bytes"
 	"runtime"
+	"os/signal"
+	"os"
+	"syscall"
+	"runtime/pprof"
 )
 
 const (
@@ -22,26 +25,33 @@ type FileLogWriter interface {
 }
 
 type LogServer struct{
-	timeNow time.Time
-	wr      LogWriter
-	buf     []byte
+	timeString string
+	wr         LogWriter
+	buf        []byte
 }
 
-func Listen() {
+func Listen() *LogServer {
 
-	cfgFile := flag.String("c", "config.json", "Set configuration file")
+	c := flag.String("c", "config.json", "Set configuration file")
+
+	profile := flag.Bool("profile", false, "file for memory profile")
 
 	flag.Parse()
 
-	loadConfig(*cfgFile)
+	if *profile {
+		Dump("start cpuprofile")
+		cpu, err := os.Create("cpu.prof")
+		DumpError(err, true)
+		pprof.StartCPUProfile(cpu)
+		defer pprof.StopCPUProfile()
 
-	New().listen(Config["address"])
-}
+		Dump("start memprofile")
+		mem, err := os.Create("mem.prof")
+		DumpError(err, true)
+		defer pprof.WriteHeapProfile(mem)
+	}
 
-func New() (s *LogServer) {
-
-	s = &LogServer{buf:make([]byte, bufSize)}
-
+	s := &LogServer{buf:make([]byte, 512)}
 	switch Config["writer"] {
 	case "console":
 		s.wr = NewConsoleWriter()
@@ -51,23 +61,26 @@ func New() (s *LogServer) {
 		s.wr = NewFileWriter()
 	}
 
+	loadConfig(*c)
+
+	s.listen(Config["address"])
+
 	return s
-	//make(map[string]*Writer)
+
 }
 
 func (o *LogServer) listen(addr string) {
+
+	o.Tick()
 
 	la, err := net.ResolveUDPAddr("udp", addr)
 	DumpError(err, true)
 
 	conn, err := net.ListenUDP("udp", la)
 	DumpError(err, true)
-
-	defer conn.Close()
+	//defer conn.Close()
 
 	Dump("Listening - %s", conn.LocalAddr())
-
-	o.Tick()
 
 	o.Read(conn)
 }
@@ -75,29 +88,24 @@ func (o *LogServer) listen(addr string) {
 func (o *LogServer) Tick() {
 
 	t := func(now time.Time) {
-		o.timeNow = now
+		o.timeString = now.Format("2006-01-02 15:04:05")
 	}
+
+	t(time.Now())
 
 	go Ticker(1*time.Second, t)
 
 }
 
 func (o *LogServer) Read(conn *net.UDPConn) {
-	writeBuf := make(chan []byte, 15*bufSize)//, runtime.NumCPU()
+	writeBuf := make(chan []byte, bufSize)//, runtime.NumCPU()
 
 	readBuf := make([]byte, 2048) //var buf [2048]byte
 
-	/*
-		count := 0
-		go Ticker(1*time.Second, func(time.Time) {
-				print(count)
-			})
-	*/
-
-
 	go func() {
 		for {
-			n , _, err := conn.ReadFromUDP(readBuf)
+			n, err := conn.Read(readBuf)
+			//n , _, err := conn.ReadFromUDP(readBuf)
 			if err == nil {
 				writeBuf <-readBuf[:n]
 			}else {
@@ -106,26 +114,31 @@ func (o *LogServer) Read(conn *net.UDPConn) {
 		}
 	}()
 
-	flushTimer := time.Tick(1 * time.Second)
-	for {
-		select {
-		case b := <-writeBuf:
-			o.Parse(b)
-
-		case now := <-flushTimer:
-			if m, ok := o.wr.(FileLogWriter); ok {
-				m.Flush()
-				m.Rotate(now)
-			}
+	go func() {
+		for {
+			o.Parse(<-writeBuf)
 		}
+	}()
+
+	// listen exit
+	exitSignal := make(chan os.Signal, 1)
+	signal.Notify(exitSignal,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT,
+	)
+
+	<-exitSignal
+
+	if m, ok := o.wr.(FileLogWriter); ok {
+		Dump("Flushing data...")
+		m.Flush()
 	}
 }
 
 // &分隔
 func (o *LogServer) Parse(b []byte) {
-
-	//arr := strings.Split(log, "&")
-
 	sep := "&"[0]
 
 	start := 0
@@ -142,33 +155,25 @@ func (o *LogServer) Parse(b []byte) {
 }
 
 func (o *LogServer) Write(b []byte) {
+	sep := "="[0]
 
-	s := bytes.SplitN(b, []byte("="), 2)
-
-	o.buf = append([]byte(o.timeNow.Format("2006-01-02 15:04:05")), "|"...)
-	o.buf = append(o.buf, s[1]...)
-
-	o.wr.Write(string(s[0]), o.buf)
-}
-
-/*
-func prof(cpuprofile string, memprofile string) {
-	if cpuprofile != "" {
-		f, err := os.Create(cpuprofile)
-		DumpError(err, true)
-
-		pprof.StartCPUProfile(f)
-		defer pprof.StopCPUProfile()
+	i := 0
+	for ; i < len(b); i++ {
+		if b[i] == sep {
+			break
+		}
 	}
 
-	if memprofile != "" {
-		f, err := os.Create(memprofile)
-		DumpError(err, true)
+	d := o.buf[:0]
 
-		defer pprof.WriteHeapProfile(f)
-	}
+	d = append(d, []byte(o.timeString)...)
+	d = append(d, "|"...)
+	d = append(d, b[i+1:]...)
+	//d := append([]byte(o.timeString), "|"...)
+	//d = append(d, b[i+1:]...)
+
+	o.wr.Write(string(b[:i]), d)
 }
-*/
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
