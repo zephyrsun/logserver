@@ -19,7 +19,7 @@ type LogWriter interface {
 	Write(string, []byte)
 }
 
-type FileLogWriter interface {
+type BufLogWriter interface {
 	Rotate(time.Time)
 	Flush()
 }
@@ -114,9 +114,20 @@ func (o *LogServer) Read(conn *net.UDPConn) {
 		}
 	}()
 
+	bufTimer := time.Tick(1 * time.Second)
+
 	go func() {
 		for {
-			o.Parse(<-writeBuf)
+			select {
+			case now := <-bufTimer:
+				if m, ok := o.wr.(BufLogWriter); ok {
+					m.Rotate(now)
+					m.Flush()
+				}
+
+			default:
+				o.Parse(<-writeBuf)
+			}
 		}
 	}()
 
@@ -131,7 +142,7 @@ func (o *LogServer) Read(conn *net.UDPConn) {
 
 	<-exitSignal
 
-	if m, ok := o.wr.(FileLogWriter); ok {
+	if m, ok := o.wr.(BufLogWriter); ok {
 		Dump("Flushing data...")
 		m.Flush()
 	}

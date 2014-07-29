@@ -31,11 +31,7 @@ func (o *bufWriter) Write(b []byte) {
 }
 
 func (o *bufWriter) Flush() {
-
-	buf := o.buf
-	o.buf = o.buf[:0]
-
-	o.wr.Write(buf)
+	o.wr.Write(o.buf)
 }
 
 func (o *bufWriter) Close() {
@@ -100,11 +96,6 @@ func NewFileWriter() *FileWriter {
 	}
 
 	fw := &FileWriter{-1, wr}
-
-	go Ticker(1*time.Second, func(now time.Time) {
-			fw.Rotate(now)
-			fw.Flush()
-		})
 
 	return fw
 }
