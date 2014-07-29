@@ -131,8 +131,9 @@ func (o *LogServer) Read(conn *net.UDPConn) {
 	// listen exit
 	exitSignal := make(chan os.Signal, 1)
 	signal.Notify(exitSignal,
-		syscall.SIGHUP,
 		syscall.SIGINT,
+		syscall.SIGKILL,
+		syscall.SIGHUP,
 		syscall.SIGTERM,
 		syscall.SIGQUIT,
 	)
