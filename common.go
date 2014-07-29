@@ -5,6 +5,13 @@ import (
 	"time"
 	"io/ioutil"
 	"encoding/json"
+	"os"
+	"path"
+)
+
+const (
+	eol     = "\n"
+	bufSize = 1024 * 1024
 )
 
 var logType = map[string]string {
@@ -47,8 +54,16 @@ func DumpError(err error, exit bool) {
 	}
 }
 
-func FormatLog() {
+func newLogFile(name string, t time.Time) *os.File {
+	name = Config["save_dir"] + name + "_" + t.Format("2006-01-02-15") + ".log"
 
+	os.MkdirAll(path.Dir(name), 0755)
+
+	//PanicOnError(err)
+	f, err := os.OpenFile(name, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0655)
+	DumpError(err, false)
+
+	return f
 }
 
 func Ticker(sec time.Duration, callback func(time.Time)) {

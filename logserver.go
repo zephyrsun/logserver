@@ -11,10 +11,6 @@ import (
 	"runtime/pprof"
 )
 
-const (
-	bufSize = 1024 * 1024
-)
-
 type LogWriter interface {
 	Write(string, []byte)
 }
@@ -55,6 +51,8 @@ func Listen() *LogServer {
 	switch Config["writer"] {
 	case "console":
 		s.wr = NewConsoleWriter()
+	case "buffer":
+		s.wr = NewBufferWriter()
 	case "file":
 		fallthrough
 	default:
@@ -114,10 +112,10 @@ func (o *LogServer) Read(conn *net.UDPConn) {
 		}
 	}()
 
-	bufTimer := time.Tick(1 * time.Second)
-
 	go func() {
+		//bufTimer := time.Tick(1 * time.Second)
 		for {
+			/*
 			select {
 			case now := <-bufTimer:
 				if m, ok := o.wr.(BufLogWriter); ok {
@@ -128,6 +126,8 @@ func (o *LogServer) Read(conn *net.UDPConn) {
 			default:
 				o.Parse(<-writeBuf)
 			}
+			*/
+			o.Parse(<-writeBuf)
 		}
 	}()
 
@@ -180,6 +180,7 @@ func (o *LogServer) Write(b []byte) {
 	d = append(d, []byte(o.timeString)...)
 	d = append(d, "|"...)
 	d = append(d, b[i+1:]...)
+	d = append(d, eol...)
 	//d := append([]byte(o.timeString), "|"...)
 	//d = append(d, b[i+1:]...)
 
