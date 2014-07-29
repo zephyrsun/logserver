@@ -140,7 +140,7 @@ func (o *LogServer) Read(conn *net.UDPConn) {
 		syscall.SIGQUIT,
 	)
 
-	<-exitSignal
+	Dump("received signal:%v", <-exitSignal)
 
 	if m, ok := o.wr.(BufLogWriter); ok {
 		Dump("Flushing data...")
