@@ -29,7 +29,7 @@ type configType map[string]string
 var Config = configType{
 	"address": ":8282",
 	"save_dir": "data/",
-	"writer":"file",
+	"writer":"",
 }
 
 func loadConfig(file string) {

@@ -51,12 +51,12 @@ func Listen() *LogServer {
 	switch Config["writer"] {
 	case "console":
 		s.wr = NewConsoleWriter()
-	case "buffer":
-		s.wr = NewBufferWriter()
 	case "file":
+		s.wr = NewFileWriter()
+	case "buffer":
 		fallthrough
 	default:
-		s.wr = NewFileWriter()
+		s.wr = NewBufferWriter()
 	}
 
 	loadConfig(*c)
@@ -113,9 +113,8 @@ func (o *LogServer) Read(conn *net.UDPConn) {
 	}()
 
 	go func() {
-		//bufTimer := time.Tick(1 * time.Second)
+		bufTimer := time.Tick(1 * time.Second)
 		for {
-			/*
 			select {
 			case now := <-bufTimer:
 				if m, ok := o.wr.(BufLogWriter); ok {
@@ -123,11 +122,9 @@ func (o *LogServer) Read(conn *net.UDPConn) {
 					m.Flush()
 				}
 
-			default:
-				o.Parse(<-writeBuf)
+			case b := <-writeBuf:
+				o.Parse(b)
 			}
-			*/
-			o.Parse(<-writeBuf)
 		}
 	}()
 

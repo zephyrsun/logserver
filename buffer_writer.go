@@ -3,8 +3,10 @@ package logserver
 import (
 	"os"
 	"time"
+	"bufio"
 )
 
+/*
 type bufWriter struct{
 	name string
 	buf  []byte
@@ -42,6 +44,48 @@ func newBufferWriter(name string) *bufWriter {
 	w.Rotate(time.Now())
 	return w
 }
+*/
+
+type bufWriter struct{
+	name string
+	f *os.File
+	wr *bufio.Writer
+}
+
+func (o *bufWriter) Write(b []byte) {
+	o.wr.Write(b)
+}
+
+func (o *bufWriter) Flush() {
+	o.wr.Flush()
+}
+
+func (o *bufWriter) Close() {
+	o.Flush()
+	o.f.Close()
+}
+
+func (o *bufWriter) Reset(now time.Time) *os.File {
+
+	o.f = newLogFile(o.name, now)
+
+	o.wr.Reset(o.f)
+
+	return o.f
+}
+
+func newBufferWriter(name string) *bufWriter {
+
+	w := &bufWriter{
+		name:name,
+	}
+
+	w.f = newLogFile(name, time.Now())
+
+	w.wr = bufio.NewWriterSize(w.f, 8*bufSize)
+
+	return w
+}
 
 type BufferWriter struct {
 	lastHour int
@@ -58,11 +102,12 @@ func (o *BufferWriter) Rotate(now time.Time) {
 		return
 	}
 
-	o.lastHour = h
+	//o.lastHour = h
 	//print(h)
 
 	for k, _ := range logType {
-		o.wr[k].Rotate(now)
+		o.wr[k].Close()
+		o.wr[k].Reset(now)
 	}
 }
 
