@@ -32,6 +32,7 @@ func (o *bufWriter) Write(b []byte) {
 
 func (o *bufWriter) Flush() {
 	o.wr.Write(o.buf)
+	o.buf = o.buf[:0]
 }
 
 func (o *bufWriter) Close() {
