@@ -55,7 +55,7 @@ func DumpError(err error, exit bool) {
 }
 
 func newLogFile(name string, t time.Time) *os.File {
-	name = Config["save_dir"] + name + "_" + t.Format("2006-01-02-15") + ".log"
+	name = Config["save_dir"] + name + "_" + t.Format("2006-01-02-15") + ".txt"
 
 	os.MkdirAll(path.Dir(name), 0755)
 

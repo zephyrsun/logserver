@@ -13,7 +13,6 @@ type FileWriter struct {
 }
 
 func (o *FileWriter) Write(k string, b []byte) {
-
 	_, err := o.wr[k].Write(b)
 	DumpError(err, true)
 }
