@@ -98,7 +98,7 @@ func (o *LogServer) Tick() {
 func (o *LogServer) Read(conn *net.UDPConn) {
 	writeBuf := make(chan []byte, bufSize) //, runtime.NumCPU()
 
-	readBuf := make([]byte, 2048) //var buf [20480]byte
+	readBuf := make([]byte, bufSize) //var buf [20480]byte
 
 	go func() {
 		for {
