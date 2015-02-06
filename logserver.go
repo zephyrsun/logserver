@@ -1,6 +1,7 @@
 package logserver
 
 import (
+	"bytes"
 	"flag"
 	"net"
 	"os"
@@ -146,21 +147,32 @@ func (o *LogServer) Read(conn *net.UDPConn) {
 	}
 }
 
+var sep = []byte("&")
+
 // &分隔
 func (o *LogServer) Parse(b []byte) {
-	sep := "&"[0]
 
-	start := 0
-	for i := 0; i < len(b); i++ {
-		if b[i] == sep {
-			o.Write(b[start:i])
+	a := bytes.Split(b, sep)
 
-			start = i + 1
-		}
+	for i := 0; i < len(a); i++ {
+		o.Write(a[i])
 	}
 
-	//last one
-	o.Write(b[start:])
+	/*
+		sep := "&"[0]
+
+		start := 0
+		for i := 0; i < len(b); i++ {
+			if b[i] == sep {
+				o.Write(b[start:i])
+
+				start = i+1
+			}
+		}
+
+		//last one
+		o.Write(b[start:])
+	*/
 }
 
 func (o *LogServer) Write(b []byte) {
