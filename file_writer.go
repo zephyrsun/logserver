@@ -20,12 +20,11 @@ func (o *FileWriter) Write(k string, b []byte) {
 }
 
 func (o *FileWriter) getWriter(k string) (wr *os.File, ok bool) {
-	wr, ok = o.wr[k]
-
-	if !ok {
-		Dump("key error: %s", k)
+	if wr, ok = o.wr[k]; ok {
+		return wr, ok
 	}
 
+	Dump("key error: %s", k)
 	return wr, ok
 }
 

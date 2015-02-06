@@ -93,8 +93,7 @@ type BufferWriter struct {
 }
 
 func (o *BufferWriter) Write(k string, b []byte) {
-	wr, ok := o.getWriter(k)
-	if ok {
+	if wr, ok := o.getWriter(k); ok {
 		wr.Write(b)
 	}
 }
@@ -110,8 +109,7 @@ func (o *BufferWriter) Rotate(now time.Time) {
 
 	for k, _ := range logType {
 
-		wr, ok := o.getWriter(k)
-		if ok {
+		if wr, ok := o.getWriter(k); ok {
 			wr.Close()
 			wr.Reset(now)
 		}
@@ -119,19 +117,18 @@ func (o *BufferWriter) Rotate(now time.Time) {
 }
 
 func (o *BufferWriter) getWriter(k string) (wr *bufWriter, ok bool) {
-	wr, ok = o.wr[k]
-
-	if !ok {
-		Dump("key error: %s", k)
+	if wr, ok = o.wr[k]; ok {
+		return wr, ok
 	}
 
-	return wr, ok
+	Dump("key error: %s", k)
+
+	return
 }
 
 func (o *BufferWriter) Flush() {
 	for k, _ := range logType {
-		wr, ok := o.getWriter(k)
-		if ok {
+		if wr, ok := o.getWriter(k); ok {
 			wr.Flush()
 		}
 	}
