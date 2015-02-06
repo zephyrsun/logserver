@@ -1,14 +1,14 @@
 package logserver
 
 import (
-	"net"
 	"flag"
-	"time"
-	"runtime"
-	"os/signal"
+	"net"
 	"os"
-	"syscall"
+	"os/signal"
+	"runtime"
 	"runtime/pprof"
+	"syscall"
+	"time"
 )
 
 type LogWriter interface {
@@ -20,7 +20,7 @@ type BufLogWriter interface {
 	Flush()
 }
 
-type LogServer struct{
+type LogServer struct {
 	timeString string
 	wr         LogWriter
 	buf        []byte
@@ -47,7 +47,7 @@ func Listen() *LogServer {
 		defer pprof.WriteHeapProfile(mem)
 	}
 
-	s := &LogServer{buf:make([]byte, 512)}
+	s := &LogServer{buf: make([]byte, 512)}
 	switch Config["writer"] {
 	case "console":
 		s.wr = NewConsoleWriter()
@@ -96,17 +96,17 @@ func (o *LogServer) Tick() {
 }
 
 func (o *LogServer) Read(conn *net.UDPConn) {
-	writeBuf := make(chan []byte, bufSize)//, runtime.NumCPU()
+	writeBuf := make(chan []byte, bufSize) //, runtime.NumCPU()
 
-	readBuf := make([]byte, 2048) //var buf [2048]byte
+	readBuf := make([]byte, 20480) //var buf [20480]byte
 
 	go func() {
 		for {
 			n, err := conn.Read(readBuf)
 			//n , _, err := conn.ReadFromUDP(readBuf)
 			if err == nil {
-				writeBuf <-readBuf[:n]
-			}else {
+				writeBuf <- readBuf[:n]
+			} else {
 				DumpError(err, false)
 			}
 		}
@@ -155,7 +155,7 @@ func (o *LogServer) Parse(b []byte) {
 		if b[i] == sep {
 			o.Write(b[start:i])
 
-			start = i+1
+			start = i + 1
 		}
 	}
 
