@@ -7,14 +7,26 @@ import (
 
 type FileWriter struct {
 	lastHour int
-	wr    map[string]*os.File
+	wr       map[string]*os.File
 	oldWr    map[string]*os.File
-
 }
 
 func (o *FileWriter) Write(k string, b []byte) {
-	_, err := o.wr[k].Write(b)
-	DumpError(err, true)
+	wr, ok := o.getWriter(k)
+	if ok {
+		_, err := wr.Write(b)
+		DumpError(err, false)
+	}
+}
+
+func (o *FileWriter) getWriter(k string) (wr *os.File, ok bool) {
+	wr, ok = o.wr[k]
+
+	if !ok {
+		Dump("key error: %s", k)
+	}
+
+	return wr, ok
 }
 
 func (o *FileWriter) Rotate(now time.Time) {
@@ -38,9 +50,9 @@ func (o *FileWriter) Rotate(now time.Time) {
 func NewFileWriter() *FileWriter {
 
 	fw := &FileWriter{
-		lastHour:-1,
-		wr:make(map[string]*os.File, len(logType)),
-		oldWr:make(map[string]*os.File, len(logType)),
+		lastHour: -1,
+		wr:       make(map[string]*os.File, len(logType)),
+		oldWr:    make(map[string]*os.File, len(logType)),
 	}
 
 	fw.Rotate(time.Now())
@@ -49,4 +61,3 @@ func NewFileWriter() *FileWriter {
 
 	return fw
 }
-

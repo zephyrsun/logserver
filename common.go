@@ -1,12 +1,12 @@
 package logserver
 
 import (
-	"fmt"
-	"time"
-	"io/ioutil"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
+	"time"
 )
 
 const (
@@ -14,22 +14,22 @@ const (
 	bufSize = 1024 * 1024
 )
 
-var logType = map[string]string {
-	"1":"login",
-	"2":"act",
-	"3":"pay",
-	"4":"item",
-	"5":"error",
-	"6":"funel",
-	"7":"att",
+var logType = map[string]string{
+	"1": "login",
+	"2": "act",
+	"3": "pay",
+	"4": "item",
+	"5": "error",
+	"6": "funel",
+	"7": "att",
 }
 
 type configType map[string]string
 
 var Config = configType{
-	"address": ":8282",
+	"address":  ":8282",
 	"save_dir": "data/",
-	"writer":"",
+	"writer":   "",
 }
 
 func loadConfig(file string) {
@@ -48,7 +48,7 @@ func DumpError(err error, exit bool) {
 	if err != nil {
 		if exit {
 			panic(err)
-		}else {
+		} else {
 			Dump("error: %s", err.Error())
 		}
 	}
@@ -72,4 +72,3 @@ func Ticker(sec time.Duration, callback func(time.Time)) {
 		callback(now)
 	}
 }
-

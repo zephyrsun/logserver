@@ -1,9 +1,9 @@
 package logserver
 
 import (
+	"bufio"
 	"os"
 	"time"
-	"bufio"
 )
 
 /*
@@ -46,10 +46,10 @@ func newBufferWriter(name string) *bufWriter {
 }
 */
 
-type bufWriter struct{
+type bufWriter struct {
 	name string
-	f *os.File
-	wr *bufio.Writer
+	f    *os.File
+	wr   *bufio.Writer
 }
 
 func (o *bufWriter) Write(b []byte) {
@@ -77,7 +77,7 @@ func (o *bufWriter) Reset(now time.Time) *os.File {
 func newBufferWriter(name string) *bufWriter {
 
 	w := &bufWriter{
-		name:name,
+		name: name,
 	}
 
 	w.f = newLogFile(name, time.Now())
@@ -89,11 +89,14 @@ func newBufferWriter(name string) *bufWriter {
 
 type BufferWriter struct {
 	lastHour int
-	wr    map[string]*bufWriter
+	wr       map[string]*bufWriter
 }
 
 func (o *BufferWriter) Write(k string, b []byte) {
-	o.wr[k].Write(b)
+	wr, ok := o.getWriter(k)
+	if ok {
+		wr.Write(b)
+	}
 }
 
 func (o *BufferWriter) Rotate(now time.Time) {
@@ -106,14 +109,31 @@ func (o *BufferWriter) Rotate(now time.Time) {
 	//print(h)
 
 	for k, _ := range logType {
-		o.wr[k].Close()
-		o.wr[k].Reset(now)
+
+		wr, ok := o.getWriter(k)
+		if ok {
+			wr.Close()
+			wr.Reset(now)
+		}
 	}
+}
+
+func (o *BufferWriter) getWriter(k string) (wr *bufWriter, ok bool) {
+	wr, ok = o.wr[k]
+
+	if !ok {
+		Dump("key error: %s", k)
+	}
+
+	return wr, ok
 }
 
 func (o *BufferWriter) Flush() {
 	for k, _ := range logType {
-		o.wr[k].Flush()
+		wr, ok := o.getWriter(k)
+		if ok {
+			wr.Flush()
+		}
 	}
 }
 
@@ -128,4 +148,3 @@ func NewBufferWriter() *BufferWriter {
 
 	return fw
 }
-
