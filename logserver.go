@@ -1,7 +1,6 @@
 package logserver
 
 import (
-	"bytes"
 	"flag"
 	"net"
 	"os"
@@ -99,7 +98,7 @@ func (o *LogServer) Tick() {
 func (o *LogServer) Read(conn *net.UDPConn) {
 	writeBuf := make(chan []byte, bufSize) //, runtime.NumCPU()
 
-	readBuf := make([]byte, 20480) //var buf [20480]byte
+	readBuf := make([]byte, 2048) //var buf [20480]byte
 
 	go func() {
 		for {
@@ -147,42 +146,47 @@ func (o *LogServer) Read(conn *net.UDPConn) {
 	}
 }
 
-var sep = []byte("&")
+var sep1, sep2 = "&"[0], "="[0]
+
+//[]byte("&")
 
 // &分隔
 func (o *LogServer) Parse(b []byte) {
 
-	a := bytes.Split(b, sep)
+	/*
+		a := bytes.Split(b, sep)
 
-	for i := 0; i < len(a); i++ {
-		o.Write(a[i])
+		for i := 0; i < len(a); i++ {
+			o.Write(a[i])
+		}
+	*/
+
+	start := 0
+	for i := 0; i < len(b); i++ {
+		if b[i] == sep1 {
+			o.Write(b[start:i])
+
+			start = i + 1
+		}
 	}
 
-	/*
-		sep := "&"[0]
+	//last one
+	o.Write(b[start:])
 
-		start := 0
-		for i := 0; i < len(b); i++ {
-			if b[i] == sep {
-				o.Write(b[start:i])
-
-				start = i+1
-			}
-		}
-
-		//last one
-		o.Write(b[start:])
-	*/
 }
 
 func (o *LogServer) Write(b []byte) {
-	sep := "="[0]
+	i, l := 0, len(b)
 
-	i := 0
-	for ; i < len(b); i++ {
-		if b[i] == sep {
+	for ; i < l; i++ {
+		if b[i] == sep2 {
 			break
 		}
+	}
+
+	if i == l {
+		Dump("length error:%s, %s", l, string(b))
+		return
 	}
 
 	d := o.buf[:0]
