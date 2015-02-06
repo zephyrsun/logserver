@@ -95,6 +95,8 @@ type BufferWriter struct {
 func (o *BufferWriter) Write(k string, b []byte) {
 	if wr, ok := o.getWriter(k); ok {
 		wr.Write(b)
+	} else {
+		Dump("data:%s", string(b))
 	}
 }
 
@@ -121,7 +123,7 @@ func (o *BufferWriter) getWriter(k string) (wr *bufWriter, ok bool) {
 		return wr, ok
 	}
 
-	Dump("key error: %s", k)
+	Dump("key error:%s", k)
 
 	return
 }

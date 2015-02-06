@@ -12,10 +12,11 @@ type FileWriter struct {
 }
 
 func (o *FileWriter) Write(k string, b []byte) {
-	wr, ok := o.getWriter(k)
-	if ok {
+	if wr, ok := o.getWriter(k); ok {
 		_, err := wr.Write(b)
 		DumpError(err, false)
+	} else {
+		Dump("data:%s", string(b))
 	}
 }
 

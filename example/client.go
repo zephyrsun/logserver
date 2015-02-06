@@ -1,9 +1,9 @@
 package main
 
 import (
-	"net"
-	ls "github.com/zephyrsun/logserver"
 	"flag"
+	ls "github.com/zephyrsun/logserver"
+	"net"
 	"time"
 )
 
