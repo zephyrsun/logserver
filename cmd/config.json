@@ -1,0 +1,8 @@
+{
+  "network": "http",
+  "address": ":1982",
+  "read_chan_size": 1024,
+  "log_chan_size": 1024,
+  "read_buffer": 1048576,
+  "logger": "file"
+}
