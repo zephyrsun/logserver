@@ -1,30 +1,35 @@
 package server
 
 import (
-	"log"
 	"logserver/config"
 	"logserver/logger"
+	"logserver/util"
 )
-
-func Fatal(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
-}
 
 type Server interface {
 	Listen()
 }
 
-var Config *config.Config
+var l logger.Logger
 
-func Start(cfg *config.Config) {
+func Start() {
+	initLogger()
+	initServer()
+}
 
-	Config = cfg
+func initLogger() {
+	switch config.Server.Logger {
+	case "file":
+		l = &logger.FileLogger{}
+		l.Init()
+	}
+}
+
+func initServer() {
 
 	var s Server
 
-	switch Config.Network {
+	switch config.Server.Network {
 	case "udp", "udp4", "udp6":
 		s = &UDPServer{}
 	case "tcp", "tcp4", "tcp6":
@@ -33,7 +38,7 @@ func Start(cfg *config.Config) {
 		s = &HTTPServer{}
 	}
 
-	log.Printf("start %s %s", Config.Network, Config.Address)
+	util.Print("start %s %s", config.Server.Network, config.Server.Address)
 
 	s.Listen()
 }
@@ -45,14 +50,7 @@ type Log struct {
 
 func (r *Log) Write() {
 
-	var l logger.Logger
-
-	switch Config.Logger {
-	case "file":
-		l = &logger.File{}
-	}
-
-	r.logs = make(chan []byte, Config.LogChanSize)
+	r.logs = make(chan []byte, config.Server.LogChanSize)
 
 	for {
 		rec := <-r.logs

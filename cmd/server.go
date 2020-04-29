@@ -3,15 +3,16 @@ package main
 import (
 	"flag"
 	"logserver/config"
-	"logserver/reader"
+	"logserver/server"
 )
 
 func main() {
+
 	file := flag.String("c", "config.json", "configuration file")
 
 	flag.Parse()
 
-	cfg := config.Load(*file)
+	config.Load(*file)
 
-	server.Start(cfg)
+	server.Start()
 }

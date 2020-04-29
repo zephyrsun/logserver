@@ -2,6 +2,8 @@ package server
 
 import (
 	"io/ioutil"
+	"logserver/config"
+	"logserver/util"
 	"net/http"
 	"time"
 )
@@ -23,7 +25,7 @@ func (s *HTTPServer) Listen() {
 	})
 
 	s.conn = &http.Server{
-		Addr:           Config.Address,
+		Addr:           config.Server.Address,
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
@@ -34,10 +36,10 @@ func (s *HTTPServer) Listen() {
 	defer s.Close()
 
 	err := s.conn.ListenAndServe()
-	Fatal(err)
+	util.Fatal(err)
 }
 
 func (s *HTTPServer) Close() {
 	err := s.conn.Close()
-	Fatal(err)
+	util.Fatal(err)
 }

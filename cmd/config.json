@@ -4,5 +4,7 @@
   "read_chan_size": 1024,
   "log_chan_size": 1024,
   "read_buffer": 1048576,
-  "logger": "file"
+  "logger": "file",
+  "log_file_dir": "../logs/",
+  "log_file_hourly": true
 }

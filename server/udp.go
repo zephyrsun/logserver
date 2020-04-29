@@ -1,7 +1,8 @@
 package server
 
 import (
-	"log"
+	"logserver/config"
+	"logserver/util"
 	"net"
 )
 
@@ -11,15 +12,15 @@ type UDPServer struct {
 }
 
 func (s *UDPServer) Listen() {
-	la, err := net.ResolveUDPAddr(Config.Network, Config.Address)
-	Fatal(err)
+	la, err := net.ResolveUDPAddr(config.Server.Network, config.Server.Address)
+	util.Fatal(err)
 
 	s.conn, err = net.ListenUDP("udp", la)
-	Fatal(err)
+	util.Fatal(err)
 
-	if Config.ReadBuffer > 0 {
-		err = s.conn.SetReadBuffer(Config.ReadBuffer)
-		Fatal(err)
+	if config.Server.ReadBuffer > 0 {
+		err = s.conn.SetReadBuffer(config.Server.ReadBuffer)
+		util.Fatal(err)
 	}
 
 	defer s.Close()
@@ -31,10 +32,10 @@ func (s *UDPServer) Listen() {
 
 func (s *UDPServer) Read() {
 	for {
-		buf := make([]byte, Config.ReadChanSize)
+		buf := make([]byte, config.Server.ReadChanSize)
 		n, err := s.conn.Read(buf)
 		if err != nil {
-			log.Println(err)
+			util.Print("UDP Read error:%s", err)
 			return
 		}
 
@@ -46,5 +47,5 @@ func (s *UDPServer) Read() {
 
 func (s *UDPServer) Close() {
 	err := s.conn.Close()
-	Fatal(err)
+	util.Fatal(err)
 }
