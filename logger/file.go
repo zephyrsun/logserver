@@ -1,10 +1,11 @@
 package logger
 
 import (
+	"fmt"
 	"logserver/config"
 	"logserver/util"
 	"os"
-	"strings"
+	"path"
 	"time"
 )
 
@@ -12,35 +13,57 @@ type FileLogger struct {
 	handler *os.File
 }
 
-const EOL = '\n'
+const (
+	eol         = '\n'
+	errorRotate = "log_file_rotate accepts: {daily|hourly}"
+)
 
 var (
 	lastT  = -1
-	rotate = make(chan bool)
+	format string
 )
 
-func (l *FileLogger) Init() {
-	l.rotateFile()
+func initFormat() {
+	switch config.Server.LogFileRotate {
+	case "hourly":
+		format = "2006-01-02-15"
+	case "daily":
+		format = "2006-01-02"
+	default:
+		util.Fatal(errorRotate)
+	}
+}
 
-	t := time.NewTicker(time.Second)
+func (l *FileLogger) initTicker() {
+	var t int
+	ticker := time.NewTicker(time.Second)
 
-	go func() { //按小时滚动日志
-		for {
-			c := <-t.C
+	for {
+		c := <-ticker.C
 
-			t := c.Day()
-			if config.Server.LogFileHourly {
-				t = c.Hour()
-			}
-
-			if t == lastT {
-				return
-			}
-
-			l.rotateFile()
+		switch config.Server.LogFileRotate {
+		case "hourly":
+			t = c.Hour()
+		case "daily":
+			t = c.Day()
+		default:
+			util.Fatal(errorRotate)
 		}
 
-	}()
+		if t == lastT {
+			return
+		}
+
+		lastT = t
+
+		l.rotateFile()
+	}
+}
+
+func (l *FileLogger) Init() {
+	initFormat()
+
+	go l.initTicker()
 }
 
 func (l *FileLogger) Write(b []byte) {
@@ -49,7 +72,7 @@ func (l *FileLogger) Write(b []byte) {
 		return
 	}
 
-	_, err := l.handler.Write(append(b, EOL))
+	_, err := l.handler.Write(append(b, eol))
 	util.Error("file write error: %s", err)
 }
 
@@ -60,16 +83,9 @@ func (l *FileLogger) rotateFile() {
 		l.handler = nil
 	}
 
-	dir := strings.TrimSuffix(config.Server.LogFileDir, "/")
+	filename := fmt.Sprintf(config.Server.LogFile, time.Now().Format(format))
 
-	format := "2006-01-02"
-	if config.Server.LogFileHourly {
-		format = "2006-01-02-15"
-	}
-
-	filename := dir + "/" + time.Now().Format(format) + ".log"
-
-	err := os.MkdirAll(dir, 0744)
+	err := os.MkdirAll(path.Dir(filename), 0744)
 	util.Fatal(err)
 
 	l.handler, err = os.OpenFile(filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)

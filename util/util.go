@@ -4,10 +4,12 @@ import (
 	"log"
 )
 
-func Fatal(err error) {
-	if err != nil {
-		log.Fatal(err)
+func Fatal(s interface{}) {
+	if s == nil {
+		return
 	}
+
+	log.Fatal(s)
 }
 
 func Error(format string, err error) {

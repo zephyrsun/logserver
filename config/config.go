@@ -17,9 +17,9 @@ type config struct {
 	//记录类型：file,cache,
 	Logger string `json:"logger"`
 	//使用file时，日志目录
-	LogFileDir string `json:"log_file_dir"`
-	//true:按小时分割，false:按天分割
-	LogFileHourly bool `json:"log_file_hourly"`
+	LogFile string `json:"log_file"`
+	//日志滚动参数：hourly,daily
+	LogFileRotate string `json:"log_file_rotate"`
 }
 
 var Server = &config{
@@ -29,8 +29,8 @@ var Server = &config{
 	ReadChanSize:  1 << 10,
 	ReadBuffer:    1 << 20,
 	Logger:        "file",
-	LogFileDir:    "../logs/",
-	LogFileHourly: false,
+	LogFile:       "./logs/log-%s.log",
+	LogFileRotate: "daily",
 }
 
 func Load(filename string) {
