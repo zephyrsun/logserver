@@ -19,7 +19,12 @@ func (s *HTTPServer) Listen() {
 		//w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 		//w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 		if req.Method == "POST" {
-			b, _ := ioutil.ReadAll(req.Body)
+			b, err := ioutil.ReadAll(req.Body)
+			if err != nil {
+				util.Print("HTTP Read error:%s", err)
+				return
+			}
+
 			s.logs <- b
 		}
 	})

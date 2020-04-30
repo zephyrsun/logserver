@@ -47,7 +47,9 @@ func (s *TCPServer) read(c net.Conn) {
 			return
 		}
 
-		s.logs <- buf[:n]
+		if n > 0 {
+			s.logs <- buf[:n]
+		}
 	}
 }
 

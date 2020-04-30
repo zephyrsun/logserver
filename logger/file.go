@@ -88,6 +88,6 @@ func (l *FileLogger) rotateFile() {
 	err := os.MkdirAll(path.Dir(filename), 0744)
 	util.Fatal(err)
 
-	l.handler, err = os.OpenFile(filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+	l.handler, err = os.OpenFile(filename, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
 	util.Fatal(err)
 }
