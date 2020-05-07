@@ -21,7 +21,7 @@ func (s *HTTPServer) Listen() {
 		if req.Method == "POST" {
 			b, err := ioutil.ReadAll(req.Body)
 			if err != nil {
-				util.Print("HTTP Read error:%s", err)
+				util.Printf("HTTP Read error:%s", err)
 				return
 			}
 
@@ -36,9 +36,9 @@ func (s *HTTPServer) Listen() {
 		MaxHeaderBytes: 1 << 20,
 	}
 
-	go s.Write()
-
 	defer s.Close()
+
+	go s.Write()
 
 	err := s.conn.ListenAndServe()
 	util.Fatal(err)

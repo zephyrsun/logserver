@@ -28,7 +28,7 @@ func (s *TCPServer) Read() {
 	for {
 		c, err := s.conn.Accept()
 		if err != nil {
-			util.Print("TCP Accept error:%s", err)
+			util.Printf("TCP Accept error:%s", err)
 			return
 		}
 
@@ -39,11 +39,11 @@ func (s *TCPServer) Read() {
 func (s *TCPServer) read(c net.Conn) {
 	defer c.Close()
 
-	buf := make([]byte, config.Server.ReadChanSize)
+	buf := make([]byte, config.Server.ReadBuffer)
 	for {
 		n, err := c.Read(buf)
 		if err != nil {
-			util.Print("TCP Read error:%s", err)
+			util.Printf("TCP Read error:%s", err)
 			return
 		}
 

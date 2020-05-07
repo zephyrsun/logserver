@@ -4,6 +4,9 @@ import (
 	"logserver/config"
 	"logserver/logger"
 	"logserver/util"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 type Server interface {
@@ -20,9 +23,10 @@ func Start() {
 func initLogger() {
 	switch config.Server.Logger {
 	case "file":
-		l = &logger.FileLogger{}
-		l.Init()
+		l = logger.NewFileLogger()
 	}
+
+	listenExit(l)
 }
 
 func initServer() {
@@ -38,9 +42,27 @@ func initServer() {
 		s = &HTTPServer{}
 	}
 
-	util.Print("start %s %s", config.Server.Network, config.Server.Address)
+	util.Printf("start %s %s", config.Server.Network, config.Server.Address)
 
 	s.Listen()
+}
+
+func listenExit(l logger.Logger) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c,
+		syscall.SIGINT,
+		syscall.SIGKILL,
+		syscall.SIGHUP,
+		syscall.SIGTERM,
+		syscall.SIGQUIT,
+	)
+
+	go func() {
+		for {
+			<-c
+			l.Close()
+		}
+	}()
 }
 
 type Log struct {
@@ -49,17 +71,9 @@ type Log struct {
 }
 
 func (r *Log) Write() {
-
-	r.logs = make(chan []byte, config.Server.LogChanSize)
+	r.logs = make(chan []byte, config.Server.WriteChanSize)
 
 	for {
-		rec := <-r.logs
-
-		//if !utf8.Valid(rec) {
-		//	log.Printf("wrong format: %s", rec)
-		//	return
-		//}
-
-		l.Write(rec)
+		l.Write(<-r.logs)
 	}
 }

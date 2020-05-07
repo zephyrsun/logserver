@@ -1,9 +1,9 @@
 {
   "network": "udp",
   "address": ":1982",
-  "read_chan_size": 1024,
-  "log_chan_size": 65536,
-  "net_read_buffer": 1048576,
+  "receive_buffer": 1048576,
+  "read_buffer": 65536,
+  "write_chan_size": 1048576,
   "logger": "file",
   "log_file": "./logs/access-%s.log",
   "log_file_rotate": "hourly"

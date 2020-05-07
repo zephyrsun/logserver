@@ -18,8 +18,8 @@ func (s *UDPServer) Listen() {
 	s.conn, err = net.ListenUDP("udp", la)
 	util.Fatal(err)
 
-	if config.Server.NetReadBuffer > 0 {
-		err = s.conn.SetReadBuffer(config.Server.NetReadBuffer)
+	if config.Server.ReceiveBuffer > 0 {
+		err = s.conn.SetReadBuffer(config.Server.ReceiveBuffer)
 		util.Fatal(err)
 	}
 
@@ -30,16 +30,25 @@ func (s *UDPServer) Listen() {
 	s.Read()
 }
 
-var i = 0
-
 func (s *UDPServer) Read() {
+	//var i = 0
+	//go func() {
+	//	t := time.Tick(time.Second)
+	//	for _ = range t {
+	//		util.Printf("i: %s", i)
+	//	}
+	//}()
+
+	buf := make([]byte, config.Server.ReadBuffer)
+
 	for {
-		buf := make([]byte, config.Server.ReadChanSize)
 		n, err := s.conn.Read(buf)
 		if err != nil {
-			util.Print("UDP Read error:%s", err)
+			util.Printf("UDP Read error:%s", err)
 			return
 		}
+
+		//i++
 
 		if n > 0 {
 			s.logs <- buf[:n]

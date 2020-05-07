@@ -8,12 +8,12 @@ import (
 type Config struct {
 	Network string `json:"network"`
 	Address string `json:"address"`
-	//UDP，TCP读取chan大小
-	ReadChanSize int `json:"read_chan_size"`
-	//日志处理slice大小
-	LogChanSize int `json:"log_chan_size"`
 	//UDP接收缓冲区大小
-	NetReadBuffer int `json:"net_read_buffer"`
+	ReceiveBuffer int `json:"receive_buffer"`
+	//读取buffer大小（能接收的数据长度）
+	ReadBuffer int `json:"read_buffer"`
+	//写入chan大小（写入队列长度）
+	WriteChanSize int `json:"write_chan_size"`
 	//记录类型：file,cache,
 	Logger string `json:"logger"`
 	//使用file时，日志目录
@@ -25,9 +25,9 @@ type Config struct {
 var Server = &Config{
 	Network:       "udp",
 	Address:       ":1982",
-	ReadChanSize:  1 << 10,
-	LogChanSize:   1 << 16,
-	NetReadBuffer: 1 << 20,
+	ReceiveBuffer: 1 << 20,
+	ReadBuffer:    1 << 16,
+	WriteChanSize: 1 << 20,
 	Logger:        "file",
 	LogFile:       "./logs/log-%s.log",
 	LogFileRotate: "daily",

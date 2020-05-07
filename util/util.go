@@ -18,6 +18,6 @@ func Error(format string, err error) {
 	}
 }
 
-func Print(format string, v ...interface{}) {
+func Printf(format string, v ...interface{}) {
 	log.Printf(format, v...)
 }
